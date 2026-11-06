@@ -283,3 +283,5 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fq-size-dat
 @media (min-width: 900px) {
   .input, .field input:not([type='checkbox']):not([type='radio']), .field select, .field textarea { font-size: 14px; min-height: 40px; }
 }
+/* Editors with a save bar: hide the floating + so it never covers "Opslaan". */
+body:has(.savebar) .fab { display: none; }

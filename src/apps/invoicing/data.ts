@@ -236,14 +236,15 @@ export async function markInvoiceSent(inv: Invoice) {
   if (!inv.sentAt) await save<Invoice>('invoices', { ...inv, sentAt: nowIso() });
 }
 
-export async function registerPayment(inv: Invoice, p: { amount: number; date: string; method: Payment['method']; note?: string }) {
-  await save<Payment>('payments', { invoiceId: inv.id, ...p });
+export async function registerPayment(inv: Invoice, p: { amount: number; date: string; method: Payment['method']; note?: string; receivedBy?: Payment['receivedBy']; bankLineId?: string }): Promise<Payment> {
+  const payment = await save<Payment>('payments', { invoiceId: inv.id, ...p });
   const payments = alive(await db.payments.where('invoiceId').equals(inv.id).toArray());
   const paid = paidAmount(inv.id, payments);
   const total = invoiceTotals(inv).total;
   if (paid >= total && inv.status === 'sent') await save<Invoice>('invoices', { ...inv, status: 'paid', paidAt: nowIso() });
   await syncGigPaid(inv.gigId, inv.kind === 'deposit' && paid >= total ? p.date : undefined);
   runTaskSync();
+  return payment;
 }
 
 /** Gig becomes "paid" when every non-credited invoice for it is paid; deposit date is copied. */

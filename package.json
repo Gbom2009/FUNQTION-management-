@@ -1,7 +1,7 @@
 {
   "name": "funqtion-hub",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Team Funqtion business suite - FEEL THE MUSIQ",
   "scripts": {
@@ -12,17 +12,23 @@
     "test": "vitest run",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "predev": "node scripts/copy-ocr.mjs",
+    "prebuild": "node scripts/copy-ocr.mjs",
+    "pretest": "node scripts/copy-ocr.mjs"
   },
   "dependencies": {
     "@fontsource/archivo-black": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@tesseract.js-data/nld": "^1.0.0",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^1.1.7",
+    "fflate": "^0.8.3",
     "pdfmake": "^0.2.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6"
+    "react-router-dom": "^6.30.6",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.4",

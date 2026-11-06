@@ -15,7 +15,7 @@ export const uid = (): string =>
 
 export const nowIso = () => new Date().toISOString();
 
-const IGNORED = new Set(['updatedAt', 'updatedBy', 'createdAt', 'createdBy']);
+const IGNORED = new Set(['updatedAt', 'updatedBy', 'createdAt', 'createdBy', 'blob']);
 
 export function diff(oldRow: Record<string, unknown> | undefined, newRow: Record<string, unknown>) {
   const changes: Record<string, [unknown, unknown]> = {};

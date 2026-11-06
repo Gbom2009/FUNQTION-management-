@@ -31,7 +31,13 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // OCR engine + language data (~14 MB) are cached on first use, not at install.
+        globIgnores: ['ocr/**'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        runtimeCaching: [{ urlPattern: /\/ocr\//, handler: 'CacheFirst', options: { cacheName: 'funqtion-ocr', expiration: { maxEntries: 10 } } }],
+      },
     }),
   ],
   test: {

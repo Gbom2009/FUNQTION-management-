@@ -44,3 +44,23 @@ describe('repo + audit', () => {
     expect(p.id).toBeTruthy();
   });
 });
+
+describe('backup v2', () => {
+  it('round-trips receipts through an encrypted ZIP and rejects a wrong passphrase', async () => {
+    const { db } = await import('./db');
+    const { makeBackup, readBackup } = await import('./backup');
+    const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'image/jpeg' });
+    await db.receipts.put({ id: 'r1', blob, mime: 'image/jpeg', size: 4, sha256: 'x', createdAt: '', createdBy: 'gijs', updatedAt: '2026-01-01', updatedBy: 'gijs' });
+    await save<Person>('persons', person());
+    const { bytes, name } = await makeBackup('geheim wachtwoord');
+    expect(name.endsWith('.fqbackup')).toBe(true);
+    await expect(readBackup(bytes, 'fout')).rejects.toThrow('wrong_passphrase');
+    const { file, blobs } = await readBackup(bytes, 'geheim wachtwoord');
+    useTestDatabase('restore-' + n++);
+    const r = await importMerge(file, blobs);
+    expect(r.inserted).toBeGreaterThanOrEqual(2);
+    const { db: db2 } = await import('./db');
+    const restored = await db2.receipts.get('r1');
+    expect(new Uint8Array(await restored!.blob.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3, 4]));
+  });
+});

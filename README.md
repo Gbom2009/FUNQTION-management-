@@ -16,10 +16,10 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 |---|---|---|
 | 01 | **Bookings & CRM** – enquiries, clients, pipeline, calendar, reminders | ✅ v0.1 |
 | 02 | **Quotes & Invoices** – quotes with packages and optional extras, acceptance, deposit/final/cancellation invoices, credit notes, payments, reminders, branded PDFs | ✅ v0.1 ([plan](docs/quotes-invoices/PLAN.md)) |
-| 03 | Contracts | planned |
-| 04 | Gig-day planner | planned |
-| 05 | Gear | planned |
-| 06 | **Money & Accounting** – income, receipts with OCR, bank import, mileage, profit per gig, partner split, VAT/year overviews | 📝 [planned](docs/money-accounting/PLAN.md) |
+| 03 | **Money & Accounting** – receipts with on-device OCR, bank import (incl. Revolut), matching, trips, profit per gig, Gijs/Coen split, investments, hours, VAT/year reports, accountant pack | ✅ v0.3 ([plan](docs/money-accounting/PLAN.md)) |
+| 04 | Contracts | planned |
+| 05 | Gig-day planner | planned |
+| 06 | Gear | planned |
 | 07 | Client portal | planned |
 | 08 | Navigation (link to the existing app) | planned |
 
@@ -43,7 +43,7 @@ npm run desktop:dev  # desktop window (needs Rust + platform WebView)
 
 ## Data
 
-Local-first: everything is stored on the device (IndexedDB) and works offline. Until a self-hosted server exists, Gijs and Coen share data through **Settings → Data & backup**: export a `.json` on one device and import it on the other (newest change per item wins). Note that the web app and the exe have separate storage.
+Local-first: everything is stored on the device (IndexedDB) and works offline. Until a self-hosted server exists, Gijs and Coen share data through **Settings → Data & backup**: export a backup (a ZIP including receipt photos, optionally encrypted with a passphrase) on one device and import it on the other (newest change per item wins). Note that the web app and the exe have separate storage. **Make regular backups**: financial records must be kept for 7 years.
 
 ## Docs
 

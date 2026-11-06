@@ -4,6 +4,14 @@
 > Status: functional plan, no code yet. Builds on App 1 (Bookings & CRM) and App 2 (Quotes & Invoices), both live in this repo.
 > Tax points are a practical summary, **not tax advice**. Rates and thresholds change every year; items marked ⚖️ must be checked with an accountant or the Belastingdienst, and every rate in the app is a **dated setting**, never hard-coded.
 
+> **Decisions made (v0.3 build)**: these replace the matching recommendations below.
+> - **Registration:** expected within the next 3 years → the app runs in **"not registered"** mode now (results per person as *resultaat uit overige werkzaamheden*). KOR/VAT modes are built in for later; the VAT quarter screen appears once the mode is set to VAT-liable.
+> - **Bank:** probably **Revolut** → Revolut (personal and Business) CSV import added next to ING, Rabobank, ABN AMRO, bunq and CAMT.053.
+> - **Split:** **50/50 by default, adjustable**: fixed % or per gig by lineup, with dated rules (a new rule applies from its start date).
+> - **Jobs next to Funqtion:** yes → hours are tracked lightly (automatic from gigs + quick manual logging); the urencriterium is shown for information only.
+> - **Server:** not now → everything is local, with **encrypted backups that include receipt photos**. A home server can be added later.
+> - **Existing gear:** not answered yet → you can add it any time under *Investeringen* (as a contribution).
+
 ## Contents
 
 0. [Starting point and key recommendation](#0-starting-point-and-key-recommendation)

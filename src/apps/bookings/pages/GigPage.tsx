@@ -16,6 +16,7 @@ import { blankGig, byId, createGig, mapsLink, personLabel, useGigs, useOrgs, use
 import { ConflictList, History, MessageComposer, NewTaskButton, StageDialog, TaskRow, Timeline, useConflicts } from '../components/parts';
 import { QuickCreate } from '../components/forms';
 import { nextStage } from '../domain/pipeline';
+import { GigProfitCard } from '../../money/pages/More';
 import { invoiceTotals, quoteTotals as quoteTotalsFull } from '../../invoicing/domain/money';
 
 type Draft = ReturnType<typeof blankGig>;
@@ -375,6 +376,7 @@ function MoneyTab({ d, set, gig, dirty }: TabProps & { gig: Gig; dirty: boolean 
         <p className="small muted" style={{ marginTop: 'var(--s3)' }}>{t('quote.total')}: <span className="strong">{euro((d.agreedFee ?? 0) + (d.travelFee ?? 0), lang)}</span></p>
       </Section>
       <GigDocuments gig={gig} disabled={dirty} />
+      <GigProfitCard gigId={gig.id} />
       <ReviewBox gig={gig} />
     </>
   );

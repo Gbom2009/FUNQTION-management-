@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../core/db';
 import { useI18n, type Key } from '../core/i18n';
 import { hashPin, useSession } from '../core/session';
 import { Field, Section, useToast } from '../core/ui';
-import { download, exportAll, importMerge, type BackupFile } from '../core/backup';
+import { BackupPanel } from '../core/ui/BackupPanel';
 import { save, softDelete, uid } from '../core/repo';
 import { loadDemo } from '../core/demo';
 import { TEMPLATE_KINDS, type Settings as S, type Template } from '../core/types';
@@ -23,7 +23,6 @@ export default function Settings() {
   const { t } = useI18n();
   const { settings, updateSettings, me, logout } = useSession();
   const toast = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [pin, setPin] = useState('');
   const [persisted, setPersisted] = useState<boolean | null>(null);
   useEffect(() => { navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null)); }, []);
@@ -39,22 +38,6 @@ export default function Settings() {
     await db.members.put({ ...me, pinHash: pin ? await hashPin(pin, salt) : undefined, pinSalt: pin ? salt : undefined });
     setPin('');
     toast(t('settings.pinSaved'));
-  }
-
-  async function doExport() {
-    const data = await exportAll();
-    download(`funqtion-backup-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`, JSON.stringify(data));
-  }
-
-  async function doImport(f: File) {
-    try {
-      const data = JSON.parse(await f.text()) as BackupFile;
-      const r = await importMerge(data);
-      toast(t('settings.importDone', { ...r }));
-      runTaskSync();
-    } catch {
-      toast(t('settings.importError'));
-    }
   }
 
   return (
@@ -104,12 +87,7 @@ export default function Settings() {
 
         <Section title={t('settings.data')}>
           <div className="stack">
-            <p className="small muted">{t('settings.shareHint')}</p>
-            <div className="row">
-              <button className="btn primary" onClick={doExport}>{t('settings.export')}</button>
-              <button className="btn" onClick={() => fileRef.current?.click()}>{t('settings.import')}</button>
-              <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = ''; }} />
-            </div>
+            <BackupPanel />
             <p className="small" style={{ color: persisted ? 'var(--ok)' : 'var(--warning)' }}>{t('settings.storage')}: {persisted ? t('settings.persisted') : t('settings.notPersisted')}</p>
             <div><button className="btn small ghost" onClick={async () => { await loadDemo(); toast(t('settings.demoDone')); }}>{t('settings.demo')}</button></div>
           </div>
