@@ -1,6 +1,7 @@
 import { save } from './repo';
 import { addDays, toDateStr } from './dates';
-import type { AvailabilityBlock, Enquiry, Organisation, Person, Venue } from './types';
+import type { AvailabilityBlock, Enquiry, Expense, Organisation, Person, Trip, Venue } from './types';
+import { db } from './db';
 import { createGig, blankGig, changeStage } from '../apps/bookings/data';
 
 // Demo data so the app can be explored before real data is entered.
@@ -32,4 +33,12 @@ export async function loadDemo() {
     contactName: 'Sanne Peters', contactInstagram: '@sannep', requestedDate: d(60), eventType: 'private_party', locationText: 'Helmond',
     rawMessage: 'Hoi! Wij geven een 30e verjaardagsfeest en zoeken een DJ, zijn jullie vrij? Ongeveer 80 man.' });
   await save<AvailabilityBlock>('availability', { memberId: 'coen', from: d(14), to: d(21), kind: 'holiday', note: 'Spanje' });
+  // Money & Accounting demo: a few expenses and a trip.
+  const cats = new Map((await db.categories.toArray()).map((c) => [c.key, c.id]));
+  if (cats.size) {
+    await save<Expense>('expenses', { date: d(-20), supplier: 'Bax-shop', description: 'XLR-kabels', categoryId: cats.get('gear')!, amount: 4495, vatAmount: 780, vatRate: 21, businessPct: 100, paidBy: 'coen', receiptIds: [], status: 'missing_receipt' });
+    await save<Expense>('expenses', { date: d(-20), supplier: 'Snackbar De Kermis', categoryId: cats.get('food')!, amount: 2350, vatAmount: 194, vatRate: 9, businessPct: 100, paidBy: 'gijs', gigId: g4.id, receiptIds: [], status: 'missing_receipt' });
+    await save<Expense>('expenses', { date: d(-5), supplier: 'Beatport', categoryId: cats.get('music')!, amount: 2599, vatAmount: 451, vatRate: 21, businessPct: 100, paidBy: 'gijs', receiptIds: [], status: 'missing_receipt' });
+    await save<Trip>('trips', { date: d(-20), gigId: g4.id, driver: 'coen', from: 'Thuis', to: 'Feesttent Kerkplein, Aarle-Rixtel', purpose: g4.title, km: 3, roundTrip: true, source: 'manual' });
+  }
 }

@@ -257,10 +257,14 @@ function PaymentDialog({ inv, open, onClose }: { inv: Invoice; open: number; onC
   const [date, setDate] = useState(todayStr());
   const [method, setMethod] = useState<Payment['method']>('bank');
   const [note, setNote] = useState('');
+  const [receivedBy, setReceivedBy] = useState<NonNullable<Payment['receivedBy']>>(() => {
+    try { return (localStorage.getItem('fq.receivedBy') as Payment['receivedBy']) || 'business'; } catch { return 'business'; }
+  });
   async function go() {
     const cents = centsFromInput(amount);
     if (!cents) return;
-    await registerPayment(inv, { amount: cents, date, method, note: note || undefined });
+    try { localStorage.setItem('fq.receivedBy', receivedBy); } catch { /* ignore */ }
+    await registerPayment(inv, { amount: cents, date, method, note: note || undefined, receivedBy });
     toast(t('i.paidToast'));
     onClose();
   }
@@ -275,6 +279,11 @@ function PaymentDialog({ inv, open, onClose }: { inv: Invoice; open: number; onC
           </select>
         </Field>
         <Field label={t('common.notes')}><input value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+        <Field label={t('m.receivedBy')}>
+          <select value={receivedBy} onChange={(e) => setReceivedBy(e.target.value as typeof receivedBy)}>
+            <option value="business">{t('m.payer.business')}</option><option value="gijs">Gijs</option><option value="coen">Coen</option>
+          </select>
+        </Field>
       </div>
     </Modal>
   );

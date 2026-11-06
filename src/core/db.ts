@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type {
-  AuditEntry, AvailabilityBlock, Enquiry, Gig, Interaction, Invoice, Member, Organisation, Package, Payment, Person,
+  Asset, AuditEntry, AvailabilityBlock, BankAccount, BankLine, BankRule, Category, Enquiry, Expense, HourEntry, PartnerEntry, Receipt, Trip, VatPeriod, Gig, Interaction, Invoice, Member, Organisation, Package, Payment, Person,
   Product, Quote, Review, Settings, StatusChange, Task, Template, Venue,
 } from './types';
 
@@ -28,6 +28,18 @@ export class FunqtionDB extends Dexie {
   invoices!: Table<Invoice, string>;
   payments!: Table<Payment, string>;
   packages!: Table<Package, string>;
+  // app 3: Money & Accounting
+  categories!: Table<Category, string>;
+  expenses!: Table<Expense, string>;
+  receipts!: Table<Receipt, string>;
+  bankAccounts!: Table<BankAccount, string>;
+  bankLines!: Table<BankLine, string>;
+  bankRules!: Table<BankRule, string>;
+  trips!: Table<Trip, string>;
+  hours!: Table<HourEntry, string>;
+  assets!: Table<Asset, string>;
+  partnerEntries!: Table<PartnerEntry, string>;
+  vatPeriods!: Table<VatPeriod, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -56,6 +68,20 @@ export class FunqtionDB extends Dexie {
       payments: 'id, invoiceId, date, updatedAt',
       packages: 'id, updatedAt',
     });
+    // App 3 – Money & Accounting.
+    this.version(3).stores({
+      categories: 'id, key, updatedAt',
+      expenses: 'id, date, categoryId, gigId, paidBy, bankLineId, updatedAt',
+      receipts: 'id, expenseId, sha256, updatedAt',
+      bankAccounts: 'id, updatedAt',
+      bankLines: 'id, accountId, date, &hash, status, updatedAt',
+      bankRules: 'id, updatedAt',
+      trips: 'id, date, gigId, driver, updatedAt',
+      hours: 'id, date, memberId, gigId, updatedAt',
+      assets: 'id, purchaseDate, updatedAt',
+      partnerEntries: 'id, date, memberId, updatedAt',
+      vatPeriods: 'id, &key, updatedAt',
+    });
   }
 }
 
@@ -71,5 +97,6 @@ export function useTestDatabase(name: string) {
 export const DATA_TABLES = [
   'persons', 'organisations', 'venues', 'enquiries', 'gigs', 'quotes', 'products', 'statusChanges',
   'availability', 'tasks', 'interactions', 'templates', 'reviews', 'invoices', 'payments', 'packages',
+  'categories', 'expenses', 'receipts', 'bankAccounts', 'bankLines', 'bankRules', 'trips', 'hours', 'assets', 'partnerEntries', 'vatPeriods',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

@@ -1,6 +1,6 @@
 import { db } from './db';
 import { save, uid } from './repo';
-import { DEFAULT_SETTINGS, type Member, type Package, type Product, type Template } from './types';
+import { DEFAULT_SETTINGS, type Category, type Member, type Package, type Product, type Template } from './types';
 import { DEFAULT_TEMPLATES } from '../apps/bookings/domain/messaging';
 import { TERMS_EN, TERMS_NL } from '../apps/invoicing/terms';
 
@@ -41,6 +41,31 @@ export async function ensureSeed() {
           { productId: ids.laser, quantity: 1, optional: true }, { productId: ids.extra, quantity: 1, optional: true }, { productId: ids.km, quantity: 30 }] }, { actor: 'system' });
       await save<Package>('packages', { name: 'Dorpsfeest / tent', eventTypes: ['village_festival', 'carnival', 'festival'], active: true,
         items: [{ productId: ids.dj, quantity: 4 }, { productId: ids.km, quantity: 20 }, { productId: ids.light, quantity: 1, optional: true }] }, { actor: 'system' });
+    }
+  }
+  if ((await db.categories.count()) === 0) {
+    // DJ-specific expense categories. Deductible % and VAT are defaults: check with an accountant.
+    const C: [string, string, string, string, number, number, string][] = [
+      ['gear', '🎛', 'Gear (klein)', 'Gear (small)', 100, 21, '4500'],
+      ['gear_asset', '🔊', 'Gear (investering)', 'Gear (investment)', 100, 21, '0200'],
+      ['gear_hire', '🚚', 'Gear huren', 'Gear hire', 100, 21, '4510'],
+      ['music', '🎵', 'Muziek & abonnementen', 'Music & subscriptions', 100, 21, '4520'],
+      ['software', '💻', 'Software & online', 'Software & online', 100, 21, '4530'],
+      ['promo', '📣', 'Promotie & marketing', 'Promo & marketing', 100, 21, '4600'],
+      ['travel', '🅿️', 'Reiskosten (overig)', 'Travel (other)', 100, 21, '4700'],
+      ['fuel', '⛽', 'Brandstof (eigen auto: via km)', 'Fuel (own car: use km)', 0, 21, '4710'],
+      ['food', '🍔', 'Eten & drinken', 'Food & drinks', 80, 9, '4800'],
+      ['phone', '📱', 'Telefoon & internet', 'Phone & internet', 100, 21, '4540'],
+      ['clothing', '👕', 'Kleding (podium)', 'Clothing (stage)', 0, 21, '4810'],
+      ['education', '🎓', 'Opleiding', 'Education', 100, 21, '4550'],
+      ['insurance', '🛡', 'Verzekering', 'Insurance', 100, 0, '4560'],
+      ['bank', '🏦', 'Bank- & betaalkosten', 'Bank & payment fees', 100, 0, '4570'],
+      ['admin', '📁', 'Administratie & KvK', 'Admin & fees', 100, 21, '4580'],
+      ['other', '•', 'Overig', 'Other', 100, 21, '4900'],
+    ];
+    for (const [key, icon, name, nameEn, deductiblePct, defaultVatRate, accountCode] of C) {
+      await save<Category>('categories', { key, icon, name, nameEn, kind: 'expense', deductiblePct, defaultVatRate, defaultBusinessPct: key === 'phone' ? 50 : 100,
+        accountCode, asset: key === 'gear_asset', active: true }, { actor: 'system' });
     }
   }
 }

@@ -85,6 +85,7 @@ export interface Venue extends Base {
   curfew?: string;
   soundLimitDb?: number;
   notes?: string;
+  distanceKm?: Partial<Record<MemberId, number>>; // one way, from each member's home
 }
 
 export interface AuditEntry {
@@ -316,6 +317,8 @@ export interface Payment extends Base {
   date: string; // yyyy-mm-dd
   amount: number; // cents (negative = refund)
   method: 'bank' | 'cash' | 'tikkie' | 'ideal' | 'other';
+  receivedBy?: Payer; // whose account the money landed on (default business)
+  bankLineId?: ID;
   note?: string;
 }
 
@@ -437,6 +440,14 @@ export interface Settings {
   noteKor: string;
   termsNl: string;
   termsEn: string;
+  // ---- Money & Accounting (app 3) ----
+  splitRules: SplitRule[];
+  mileageRate: number;      // cents per km
+  homeGijs?: string;
+  homeCoen?: string;
+  taxSetAsidePct: number;   // indication for income tax + Zvw
+  assetMinCents: number;    // capitalise from (excl. VAT)
+  lastBackupAt?: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -474,4 +485,146 @@ export const DEFAULT_SETTINGS: Settings = {
   noteKor: 'Btw vrijgesteld – kleineondernemersregeling (KOR).',
   termsNl: '',
   termsEn: '',
+  splitRules: [{ validFrom: '2000-01-01', method: 'fixed', gijsPct: 50, soloPct: 80 }],
+  mileageRate: 23,
+  taxSetAsidePct: 30,
+  assetMinCents: 45000,
 };
+
+// ---- App 3: Money & Accounting ------------------------------------------------
+
+export type Payer = 'business' | MemberId;
+
+export interface Category extends Base {
+  key: string;
+  name: string;
+  nameEn: string;
+  kind: 'expense' | 'income';
+  deductiblePct: number;   // e.g. 80 for food & drinks (representation)
+  defaultVatRate: number;  // 21 / 9 / 0
+  defaultBusinessPct: number;
+  accountCode?: string;    // grootboek code for the accountant
+  asset?: boolean;         // purchases in this category become assets
+  icon?: string;
+  active: boolean;
+}
+
+export interface Expense extends Base {
+  date: string;           // yyyy-mm-dd
+  supplier: string;
+  description?: string;
+  categoryId: ID;
+  amount: number;         // incl. VAT, cents
+  vatAmount: number;      // cents
+  vatRate: number;        // %
+  businessPct: number;    // 0..100 business share
+  paidBy: Payer;
+  gigId?: ID;
+  assetId?: ID;
+  receiptIds: ID[];
+  bankLineId?: ID;
+  reverseCharge?: boolean; // foreign service, VAT reverse-charged
+  status: 'ok' | 'missing_receipt';
+  note?: string;
+}
+
+export interface Receipt extends Base {
+  blob: Blob;
+  mime: string;
+  size: number;
+  sha256: string;
+  name?: string;
+  ocrText?: string;
+  expenseId?: ID;
+}
+
+export interface BankAccount extends Base {
+  name: string;
+  bank?: string;
+  ibanMasked?: string;
+  owner: Payer;
+  active: boolean;
+}
+
+export interface BankMatch { type: 'payment' | 'expense' | 'partner'; id: ID; amount: number }
+
+export interface BankLine extends Base {
+  accountId: ID;
+  date: string;
+  amount: number;         // signed cents (+ in, − out)
+  counterparty: string;
+  counterIban?: string;
+  description: string;
+  hash: string;
+  batchId: string;
+  status: 'unmatched' | 'matched' | 'private' | 'transfer' | 'ignored';
+  matches: BankMatch[];
+}
+
+export interface BankRule extends Base {
+  match: string;          // lower-case text found in counterparty/description
+  action: 'expense' | 'private' | 'transfer' | 'ignore';
+  categoryId?: ID;
+  businessPct?: number;
+}
+
+export interface Trip extends Base {
+  date: string;
+  gigId?: ID;
+  driver: MemberId;
+  from: string;
+  to: string;
+  purpose: string;
+  km: number;             // one way
+  roundTrip: boolean;
+  source: 'venue' | 'manual' | 'estimate' | 'nav';
+  parking?: number;       // cents
+}
+
+export interface HourEntry extends Base {
+  memberId: MemberId;
+  date: string;
+  hours: number;
+  kind: 'gig' | 'travel' | 'prep' | 'promo' | 'admin' | 'training' | 'other';
+  gigId?: ID;
+  note?: string;
+}
+
+export interface Asset extends Base {
+  name: string;
+  purchaseDate: string;
+  cost: number;           // excl. VAT, cents
+  residual: number;       // cents
+  lifeYears: number;
+  businessPct: number;
+  paidBy: Payer;
+  expenseId?: ID;
+  serial?: string;
+  disposedAt?: string;
+  disposalAmount?: number;
+  note?: string;
+}
+
+export interface PartnerEntry extends Base {
+  memberId: MemberId;     // who paid / received
+  date: string;
+  kind: 'contribution' | 'withdrawal' | 'settlement';
+  toMemberId?: MemberId;  // settlement: paid to the other partner
+  amount: number;         // cents, positive
+  note?: string;
+}
+
+export interface VatPeriod extends Base {
+  key: string;            // 2027-Q1
+  boxes: Record<string, number>;
+  filedAt?: string;
+  paidAt?: string;
+  note?: string;
+}
+
+export interface SplitRule {
+  validFrom: string;      // yyyy-mm-dd
+  method: 'fixed' | 'by_lineup';
+  gijsPct: number;        // fixed / shared items
+  soloPct: number;        // by_lineup: share for the solo performer
+}
