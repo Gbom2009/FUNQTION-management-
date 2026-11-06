@@ -19,7 +19,7 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 | 03 | Contracts | planned |
 | 04 | Gig-day planner | planned |
 | 05 | Gear | planned |
-| 06 | Accounting | planned |
+| 06 | **Money & Accounting** – income, receipts with OCR, bank import, mileage, profit per gig, partner split, VAT/year overviews | 📝 [planned](docs/money-accounting/PLAN.md) |
 | 07 | Client portal | planned |
 | 08 | Navigation (link to the existing app) | planned |
 
@@ -49,5 +49,6 @@ Local-first: everything is stored on the device (IndexedDB) and works offline. U
 
 - [Bookings & CRM — functional plan](docs/bookings-crm/PLAN.md)
 - [Quotes & Invoices — functional plan](docs/quotes-invoices/PLAN.md)
+- [Money & Accounting — functional plan](docs/money-accounting/PLAN.md)
 - [Draft general terms (algemene voorwaarden)](docs/legal/ALGEMENE-VOORWAARDEN.md)
 - [Architecture: how the apps fit together](docs/ARCHITECTURE.md)
