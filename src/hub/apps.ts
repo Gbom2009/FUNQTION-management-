@@ -12,7 +12,7 @@ export interface AppEntry {
 
 export const APPS: AppEntry[] = [
   { id: 'bookings', name: 'app.bookings', desc: 'app.bookings.desc', path: '/bookings' },
-  { id: 'invoicing', name: 'app.invoicing', desc: 'app.invoicing.desc' },
+  { id: 'invoicing', name: 'app.invoicing', desc: 'app.invoicing.desc', path: '/invoicing' },
   { id: 'contracts', name: 'app.contracts', desc: 'app.contracts.desc' },
   { id: 'gigday', name: 'app.gigday', desc: 'app.gigday.desc' },
   { id: 'gear', name: 'app.gear', desc: 'app.gear.desc' },

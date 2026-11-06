@@ -4,6 +4,14 @@
 > Status: functional plan, no code yet. Builds on App 1 (Bookings & CRM, live in this repo).
 > Tax and legal points below are a practical summary, **not tax advice**. Have an accountant or the Belastingdienst confirm the items marked ⚖️.
 
+> **Decisions made (v0.1 build)**: these replace the matching recommendations below.
+> - **Registration:** not registered yet → business profile mode **"not registered – no VAT"**. KOR and VAT modes are built in and can be switched on later in Settings.
+> - **Bank details:** you enter the IBAN yourself in the app (Settings). It's stored only on the device and in your own backups, never in code or on GitHub.
+> - **No server (local only):** clients receive the quote PDF (with your terms attached) via e-mail/WhatsApp/share sheet and accept by replying. You record the acceptance with **"Akkoord ontvangen"**, with name, channel and chosen extras as evidence. The gig is then confirmed automatically (unless there is a calendar conflict). Payments are by bank transfer and registered by hand. Online acceptance pages, payment links and "viewed" tracking wait for a server.
+> - **Invoice numbers:** one gapless series per person (`F2026-G-0001` for Gijs, `F2026-C-0001` for Coen), so two devices can never produce the same number without a server.
+> - **General terms:** drafted in [docs/legal/ALGEMENE-VOORWAARDEN.md](../legal/ALGEMENE-VOORWAARDEN.md) and editable in the app. **Have them checked.**
+> - **Domain:** you have one; it becomes useful once e-mail sending moves to a server.
+
 ## Contents
 
 0. [Read this first: your "unofficial" status](#0-read-this-first-your-unofficial-status)

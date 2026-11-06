@@ -167,8 +167,9 @@ export function StageDialog({ gig, to: initialTo, onClose }: { gig: Gig; to?: St
 // ---------------------------------------------------------------------------
 // Message composer: templates -> WhatsApp / e-mail, logged on the timeline
 
-export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent }: {
+export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent, extraFields, pdf, language: forcedLang, title }: {
   kind?: TemplateKind; gig?: Gig; person?: Person; enquiry?: Enquiry; onClose: () => void; onSent?: () => void;
+  extraFields?: Record<string, string>; pdf?: { name: string; make: () => Promise<Blob> }; language?: 'nl' | 'en'; title?: string;
 }) {
   const { t, lang } = useI18n();
   const { me, settings } = useSession();
@@ -176,7 +177,7 @@ export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent }:
   const templates = (useLiveQuery(() => db.templates.toArray(), []) ?? []).filter((x) => !x.deletedAt);
   const venues = byId(useVenues());
   const quotes = useQuotes(gig?.id);
-  const language = person?.language ?? lang;
+  const language = forcedLang ?? person?.language ?? lang;
   const initial = templates.find((x) => x.kind === kind && x.language === language) ?? templates.find((x) => x.kind === kind);
   const [tplId, setTplId] = useState<string>('');
   const tpl = templates.find((x) => x.id === tplId) ?? initial;
@@ -192,12 +193,36 @@ export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent }:
     amount: latestQuote ? euro(quoteTotals(latestQuote.lines).total, language) : euro(gig?.agreedFee, language),
     validUntil: fmtDate(latestQuote?.validUntil, language),
     reviewLink: settings.reviewLink ?? '', sender: me?.name ?? '', series: gig?.seriesName ?? gig?.title ?? '',
+    iban: settings.iban || '[IBAN]', accountHolder: settings.accountHolder || settings.legalNames || settings.businessName,
+    ...extraFields,
   };
   const [body, setBody] = useState<string | null>(null);
   const text = body ?? (tpl ? fillTemplate(tpl.body, fields) : '');
   const subject = tpl?.subject ? fillTemplate(tpl.subject, fields) : '';
-  const phone = person?.whatsapp || person?.phone || enquiry?.contactPhone;
-  const email = person?.email || enquiry?.contactEmail;
+  const phone = person?.whatsapp || person?.phone || enquiry?.contactPhone || extraFields?.phone;
+  const email = extraFields?.email || person?.email || enquiry?.contactEmail;
+  const [busy, setBusy] = useState(false);
+  const canShareFiles = typeof navigator !== 'undefined' && 'canShare' in navigator;
+
+  async function sharePdf() {
+    if (!pdf) return;
+    setBusy(true);
+    try {
+      const blob = await pdf.make();
+      const file = new File([blob], pdf.name, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text, title: subject || pdf.name });
+        await logged('whatsapp');
+      } else {
+        downloadBlob(blob, pdf.name);
+      }
+    } catch { /* share cancelled */ } finally { setBusy(false); }
+  }
+  async function downloadPdf() {
+    if (!pdf) return;
+    setBusy(true);
+    try { downloadBlob(await pdf.make(), pdf.name); } finally { setBusy(false); }
+  }
 
   async function logged(channel: InteractionChannel) {
     await logInteraction({ at: nowIso(), channel, direction: 'out', summary: `${tpl?.name ?? t('msg.send')}: ${text.slice(0, 160)}`,
@@ -207,7 +232,7 @@ export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent }:
   }
 
   return (
-    <Modal title={t('msg.send')} onClose={onClose}>
+    <Modal title={title ?? t('msg.send')} onClose={onClose}>
       <Field label={t('msg.template')}>
         <select value={tpl?.id ?? ''} onChange={(e) => { setTplId(e.target.value); setBody(null); }}>
           <option value="">{t('msg.noTemplate')}</option>
@@ -215,14 +240,29 @@ export function MessageComposer({ kind, gig, person, enquiry, onClose, onSent }:
         </select>
       </Field>
       <Field label={t('msg.preview')}><textarea rows={10} value={text} onChange={(e) => setBody(e.target.value)} /></Field>
+      {pdf && (
+        <div className="row">
+          {canShareFiles && <button className="btn primary" disabled={busy} onClick={sharePdf}>{t('i.share')}</button>}
+          <button className="btn" disabled={busy} onClick={downloadPdf}>{t('i.download')}</button>
+          <span className="tiny muted">{t('i.mailHint')}</span>
+        </div>
+      )}
       <div className="row">
-        <a className="btn primary" href={whatsAppLink(phone, text)} target="_blank" rel="noreferrer" onClick={() => logged('whatsapp')}>{t('msg.whatsapp')}</a>
+        <a className={`btn ${pdf ? '' : 'primary'}`} href={whatsAppLink(phone, text)} target="_blank" rel="noreferrer" onClick={() => logged('whatsapp')}>{t('msg.whatsapp')}</a>
         <a className="btn" href={mailtoLink(email, subject, text)} onClick={() => logged('email')}>{t('msg.email')}</a>
         <button className="btn ghost" onClick={async () => { try { await navigator.clipboard.writeText(text); toast(t('common.copied')); } catch { /* ignore */ } }}>{t('common.copy')}</button>
       </div>
       {(phone || email) && <div className="muted small">{[phone, email].filter(Boolean).join(' · ')}</div>}
     </Modal>
   );
+}
+
+export function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 // ---------------------------------------------------------------------------

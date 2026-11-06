@@ -212,25 +212,111 @@ export interface QuoteLine {
   unit: 'hour' | 'piece' | 'km' | 'flat';
   unitPrice: number; // cents
   vatRate: number;   // percent, 0 / 9 / 21
+  discountPct?: number; // line discount
+  optional?: boolean;   // extra the client may choose
+  selected?: boolean;   // for optional lines: included in the agreed total
+  productId?: ID;
+  packageId?: ID;
+  /** Invoice only: deduction of an earlier (deposit) invoice */
+  refInvoiceId?: ID;
 }
+
+/** Frozen copy of the parties at the moment a document is sent/finalised. */
+export interface PartySnapshot {
+  name: string;
+  attention?: string;
+  address?: string; // multi-line
+  email?: string;
+  phone?: string;
+  kvk?: string;
+  vatId?: string;
+  iban?: string;
+  accountHolder?: string;
+  website?: string;
+}
+
+export type VatMode = 'private' | 'kor' | 'vat';
 
 export interface Quote extends Base {
   gigId: ID;
   version: number;
+  number?: string; // O2026-G-0001, assigned when sent
   status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired' | 'superseded';
+  language?: Lang;
+  issueDate?: string;
   sentAt?: string;
   validUntil?: string; // yyyy-mm-dd
   acceptedAt?: string;
+  acceptedBy?: string;
+  acceptedVia?: 'whatsapp' | 'email' | 'phone' | 'in_person' | 'signed_pdf' | 'other';
+  acceptedNote?: string;
+  declinedReason?: string;
   lines: QuoteLine[];
+  discountPct?: number; // on the total
+  depositPct?: number;
+  intro?: string;
   notes?: string;
+  client?: PartySnapshot;
+  seller?: PartySnapshot;
+  vatMode?: VatMode;
 }
 
 export interface Product extends Base {
   name: string;
+  nameEn?: string;
+  description?: string;
+  category?: 'performance' | 'sound' | 'light' | 'effects' | 'travel' | 'extra' | 'fee' | 'other';
   unit: QuoteLine['unit'];
   price: number; // cents
   vatRate: number;
+  optionalByDefault?: boolean;
   active: boolean;
+}
+
+export interface Package extends Base {
+  name: string;
+  description?: string;
+  eventTypes: EventType[];
+  items: { productId: ID; quantity: number; optional?: boolean }[];
+  active: boolean;
+}
+
+export const INVOICE_KINDS = ['standard', 'deposit', 'final', 'credit_note', 'cancellation'] as const;
+export type InvoiceKind = (typeof INVOICE_KINDS)[number];
+
+export interface Invoice extends Base {
+  number?: string; // assigned at finalisation, gapless per series
+  series?: string; // e.g. F2026-G
+  kind: InvoiceKind;
+  gigId?: ID;
+  quoteId?: ID;
+  creditsInvoiceId?: ID; // credit notes: the invoice being credited
+  personId?: ID;
+  organisationId?: ID;
+  status: 'draft' | 'sent' | 'paid' | 'credited';
+  language: Lang;
+  issueDate?: string;  // yyyy-mm-dd
+  supplyDate?: string; // gig date
+  dueDate?: string;
+  lines: QuoteLine[];
+  reference?: string;  // client PO / reference
+  notes?: string;
+  reason?: string;     // credit note / cancellation reason
+  client: PartySnapshot;
+  seller?: PartySnapshot;
+  vatMode: VatMode;
+  finalisedAt?: string;
+  sentAt?: string;
+  paidAt?: string;
+  dunningPaused?: boolean;
+}
+
+export interface Payment extends Base {
+  invoiceId: ID;
+  date: string; // yyyy-mm-dd
+  amount: number; // cents (negative = refund)
+  method: 'bank' | 'cash' | 'tikkie' | 'ideal' | 'other';
+  note?: string;
 }
 
 export interface StatusChange extends Base {
@@ -251,7 +337,7 @@ export interface AvailabilityBlock extends Base {
 
 export const TASK_KINDS = [
   'reply_enquiry', 'follow_up_quote', 'quote_expiry', 'option_expiry', 'music_wishes', 'final_check',
-  'gear_check', 'mark_played', 'invoice', 'payment', 'review_request', 'rebook', 'custom',
+  'gear_check', 'mark_played', 'invoice', 'payment', 'review_request', 'rebook', 'dunning', 'custom',
 ] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 
@@ -263,6 +349,7 @@ export interface Task extends Base {
   gigId?: ID;
   personId?: ID;
   enquiryId?: ID;
+  invoiceId?: ID;
   status: 'open' | 'done' | 'cancelled';
   snoozedUntil?: string;
   completedAt?: string;
@@ -286,7 +373,7 @@ export interface Interaction extends Base {
 
 export const TEMPLATE_KINDS = [
   'enquiry_available', 'enquiry_unavailable', 'quote_follow_up', 'music_wishes', 'final_check',
-  'thank_you_review', 'rebook', 'custom',
+  'thank_you_review', 'rebook', 'quote_send', 'invoice_send', 'reminder_1', 'reminder_2', 'reminder_3', 'custom',
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
 
@@ -327,6 +414,29 @@ export interface Settings {
   defaultVatRate: number;
   reviewLink?: string;
   businessName: string;
+  // ---- Quotes & Invoices (app 2) ----
+  vatMode: VatMode;
+  legalNames?: string;    // e.g. "G. van Doren & C. …"
+  address?: string;       // street + number
+  postcode?: string;
+  city?: string;
+  kvk?: string;
+  vatId?: string;
+  iban?: string;          // entered by the user on the device, never in code
+  accountHolder?: string;
+  bizEmail?: string;
+  bizPhone?: string;
+  website?: string;
+  paymentTermDays: number;
+  depositPct: number;
+  cancellationScale: { daysBefore: number; pct: number }[]; // sorted desc by daysBefore
+  dunning1Days: number;
+  dunning2Days: number;
+  dunning3Days: number;
+  notePrivate: string;
+  noteKor: string;
+  termsNl: string;
+  termsEn: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -348,4 +458,20 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultVatRate: 0,
   reviewLink: '',
   businessName: 'Team Funqtion',
+  vatMode: 'private',
+  paymentTermDays: 14,
+  depositPct: 50,
+  cancellationScale: [
+    { daysBefore: 90, pct: 25 },
+    { daysBefore: 30, pct: 50 },
+    { daysBefore: 7, pct: 75 },
+    { daysBefore: 0, pct: 100 },
+  ],
+  dunning1Days: 3,
+  dunning2Days: 14,
+  dunning3Days: 28,
+  notePrivate: 'Er wordt geen btw in rekening gebracht.',
+  noteKor: 'Btw vrijgesteld – kleineondernemersregeling (KOR).',
+  termsNl: '',
+  termsEn: '',
 };

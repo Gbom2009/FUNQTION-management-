@@ -151,3 +151,21 @@ describe('messaging', () => {
     expect(toWhatsAppNumber('+31 6 1234 5678')).toBe('31612345678');
   });
 });
+
+describe('payment reminders', () => {
+  const now = new Date('2027-03-01T12:00:00');
+  const inv = {
+    ...base, id: 'inv1', number: 'F2027-G-0001', kind: 'standard' as const, status: 'sent' as const, language: 'nl' as const,
+    dueDate: '2027-02-20', lines: [{ id: 'l', description: 'x', quantity: 1, unit: 'flat' as const, unitPrice: 10000, vatRate: 0 }],
+    client: { name: 'Klant' }, vatMode: 'private' as const,
+  };
+  it('plans friendly, firm and formal reminders after the due date', () => {
+    const d = desiredTasks({ gigs: [], enquiries: [], quotes: [], reviews: [], invoices: [inv], payments: [] }, S, now);
+    expect(d.map((t) => [t.ruleKey, t.templateKind])).toEqual([['dun1:inv1', 'reminder_1'], ['dun2:inv1', 'reminder_2'], ['dun3:inv1', 'reminder_3']]);
+  });
+  it('stops reminding once paid or paused', () => {
+    const pay = { ...base, id: 'p', invoiceId: 'inv1', date: '2027-02-25', amount: 10000, method: 'bank' as const };
+    expect(desiredTasks({ gigs: [], enquiries: [], quotes: [], reviews: [], invoices: [inv], payments: [pay] }, S, now)).toHaveLength(0);
+    expect(desiredTasks({ gigs: [], enquiries: [], quotes: [], reviews: [], invoices: [{ ...inv, dunningPaused: true }], payments: [] }, S, now)).toHaveLength(0);
+  });
+});

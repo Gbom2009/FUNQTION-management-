@@ -4,6 +4,7 @@ import { ToastProvider } from './core/ui';
 import Login from './core/Login';
 import Hub from './hub/Hub';
 import BookingsApp from './apps/bookings/BookingsApp';
+import InvoicingApp from './apps/invoicing/InvoicingApp';
 import Settings from './settings/Settings';
 
 function Gate() {
@@ -13,6 +14,7 @@ function Gate() {
     <Routes>
       <Route path="/" element={<Hub />} />
       <Route path="/bookings/*" element={<BookingsApp />} />
+      <Route path="/invoicing/*" element={<InvoicingApp />} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
