@@ -6,7 +6,7 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 
 | Platform | How | Status |
 |---|---|---|
-| Web app | `npm run dev` locally, or GitHub Pages from `main` | ✅ |
+| Web app | **https://gbom2009.github.io/FUNQTION-management-/** (published from `main` on every merge), or `npm run dev` locally | ✅ |
 | Windows `.exe` | Built by GitHub Actions on every push (Tauri) | ✅ |
 | iPhone / iPad | Now: install the web app via Safari → *Add to Home Screen*. Later: native app via `tauri ios build` (needs a Mac + Apple Developer account) | 🟡 |
 
