@@ -1,0 +1,102 @@
+/* Team Funqtion design tokens for the app suite.
+   Taken from Gbom2009/funqtion-site css/tokens.css (near-black monochrome,
+   monospaced type, single orange accent #f68712, hairline rules, corner
+   brackets) and extended with what an app needs: status colours, member
+   colours, form controls and a high-contrast light theme for sunlight. */
+
+:root {
+  color-scheme: dark;
+  --fq-page: #040404;
+  --fq-dusk: #141414;
+  --fq-raised: #0c0c0c;
+  --fq-hairline: #363636;
+  --fq-machine-grey: #6c6c6c;
+  --fq-quiet-grey: #7a7a7a;
+  --fq-flat-grey: #8d8d8d;
+  --fq-off-white: #d9d9d9;
+  --fq-power-white: #f0f0f0;
+  --fq-accent: #f68712;
+  --fq-on-accent: #040404;
+
+  --fq-surface: var(--fq-page);
+  --fq-surface-inset: var(--fq-dusk);
+  --fq-surface-raised: var(--fq-raised);
+  --fq-text-strong: var(--fq-power-white);
+  --fq-text: var(--fq-off-white);
+  --fq-text-dim: var(--fq-flat-grey);
+  --fq-rule-color: var(--fq-hairline);
+  --fq-rule: 1px solid var(--fq-rule-color);
+
+  /* Status colours: never used alone, always with a label (WCAG 1.4.1). */
+  --st-enquiry: #a0a0a0;
+  --st-option: #e8b84a;
+  --st-quote_sent: #6cb2ff;
+  --st-confirmed: #4fd17a;
+  --st-played: #c09cff;
+  --st-invoiced: #45d0c8;
+  --st-paid: #4fd17a;
+  --st-lost: #ff7a7a;
+  --st-cancelled: #ff7a7a;
+  --danger: #ff7a7a;
+  --warning: #e8b84a;
+  --ok: #4fd17a;
+
+  --m-gijs: #f68712;
+  --m-coen: #6cb2ff;
+
+  --fq-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Roboto Mono', monospace;
+  --fq-font-display: 'Archivo Black', 'Arial Black', system-ui, sans-serif;
+  --fq-size-legend: 11px;
+  --fq-size-data: 13px;
+  --fq-size-body: 15px;
+  --fq-size-sub: 19px;
+  --fq-size-h1: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+
+  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.25rem; --s6: 1.5rem; --s8: 2rem;
+  --gutter: var(--s5);
+  --radius: 0px;
+  --touch: 44px;
+  --ease: cubic-bezier(0.14, 0.86, 0.37, 0.96);
+  --dur: 0.2s;
+  --bottom-nav-h: 64px;
+  --sidebar-w: 232px;
+}
+
+@media (max-width: 767px) { :root { --gutter: var(--s4); } }
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --fq-surface: #ffffff;
+  --fq-surface-inset: #f1f1f1;
+  --fq-surface-raised: #fafafa;
+  --fq-text-strong: #000000;
+  --fq-text: #141414;
+  --fq-text-dim: #555555;
+  --fq-rule-color: #c4c4c4;
+  --fq-accent: #b85a00; /* darker orange: 4.9:1 on white */
+  --fq-on-accent: #ffffff;
+  --st-enquiry: #5c5c5c; --st-option: #8a6100; --st-quote_sent: #0059b3; --st-confirmed: #12733a;
+  --st-played: #6b3fc4; --st-invoiced: #00706a; --st-paid: #12733a; --st-lost: #b3261e; --st-cancelled: #b3261e;
+  --danger: #b3261e; --warning: #8a6100; --ok: #12733a;
+  --m-gijs: #b85a00; --m-coen: #0059b3;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --fq-surface: #ffffff; --fq-surface-inset: #f1f1f1; --fq-surface-raised: #fafafa;
+    --fq-text-strong: #000000; --fq-text: #141414; --fq-text-dim: #555555; --fq-rule-color: #c4c4c4;
+    --fq-accent: #b85a00; --fq-on-accent: #ffffff;
+    --st-enquiry: #5c5c5c; --st-option: #8a6100; --st-quote_sent: #0059b3; --st-confirmed: #12733a;
+    --st-played: #6b3fc4; --st-invoiced: #00706a; --st-paid: #12733a; --st-lost: #b3261e; --st-cancelled: #b3261e;
+    --danger: #b3261e; --warning: #8a6100; --ok: #12733a; --m-gijs: #b85a00; --m-coen: #0059b3;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root { --fq-text: var(--fq-text-strong); --fq-text-dim: var(--fq-text); --fq-rule-color: var(--fq-machine-grey); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
