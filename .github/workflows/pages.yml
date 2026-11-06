@@ -1,6 +1,9 @@
-# Publishes the web app to GitHub Pages from main. On iPhone/iPad open the
-# Pages URL in Safari and choose Share > Add to Home Screen to install it.
-# One-time setup: repo Settings > Pages > Source: "GitHub Actions".
+# Publishes the web app to GitHub Pages on every push to main:
+#   https://gbom2009.github.io/FUNQTION-management-/
+# The built site is pushed to the `gh-pages` branch, which GitHub serves
+# automatically. If the site does not appear, check repo Settings > Pages >
+# Source: "Deploy from a branch", branch `gh-pages`, folder `/ (root)`.
+# On iPhone/iPad: open the URL in Safari > Share > Add to Home Screen.
 name: Web app (GitHub Pages)
 
 on:
@@ -9,16 +12,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,16 +29,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Add .nojekyll and 404 fallback
+        run: |
+          touch dist/.nojekyll
+          cp dist/index.html dist/404.html
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          path: dist
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'Deploy web app'
