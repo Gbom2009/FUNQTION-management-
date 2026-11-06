@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Funqtion",
+  "version": "0.1.0",
+  "identifier": "nl.funqtion.hub",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Funqtion",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 380,
+        "minHeight": 600,
+        "backgroundColor": "#040404"
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "publisher": "Team Funqtion",
+    "category": "Business",
+    "shortDescription": "Team Funqtion business suite",
+    "longDescription": "Bookings & CRM and the other Team Funqtion apps in one place. FEEL THE MUSIQ.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": { "installMode": "currentUser" }
+    }
+  }
+}

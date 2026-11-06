@@ -5,6 +5,15 @@
 
 This document describes *what* the app does and *how it fits* into the future Funqtion suite (invoicing, accounting, contracts, gear, gig-day planner, client portal, navigation). Section 9 lists the decisions we still need from you before building.
 
+> **Decisions made (v0.1 build)**: these replace the matching recommendations below.
+> - **Business:** informal partnership, not VAT-registered → default VAT **0%** (setting).
+> - **Options:** included anyway (default expiry 14 days).
+> - **Double bookings:** the same person can play two gigs on one day only if no build-up is needed and there are ≥ 2 hours between them.
+> - **Storage:** **local-first** on the device (IndexedDB) instead of Supabase. A self-hosted server comes later; the data model is already sync-ready. Sharing in the meantime: export/import backup.
+> - **Language:** Dutch and English (switch in Settings).
+> - **Branding:** tokens, fonts and logo taken from `Gbom2009/funqtion-site`.
+> - **Delivery:** web app now; Windows exe built by GitHub Actions on every push; iPhone/iPad app later. All apps live in this repo behind one hub page. See [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 ---
 
 ## Contents
