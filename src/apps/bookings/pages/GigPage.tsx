@@ -6,16 +6,17 @@ import { useI18n } from '../../../core/i18n';
 import { useSession } from '../../../core/session';
 import { Check, Chips, Empty, Field, MemberChips, Section, StagePill, useToast } from '../../../core/ui';
 import { centsFromInput, euro, fmtDate, fmtDateLong, inputFromCents } from '../../../core/format';
-import { addDays, addMonths, parseDate, toDateStr } from '../../../core/dates';
+import { addMonths, parseDate, toDateStr } from '../../../core/dates';
 import { nowIso, save, softDelete, uid } from '../../../core/repo';
 import {
-  EVENT_TYPES, WISH_KINDS, type Gig, type GigContact, type MemberId, type MusicWish, type Product, type Quote, type QuoteLine,
+  EVENT_TYPES, WISH_KINDS, type Gig, type GigContact, type MemberId, type MusicWish, type Invoice,
   type Review, type SetSlot,
 } from '../../../core/types';
-import { blankGig, byId, changeStage, createGig, mapsLink, personLabel, useGigs, useOrgs, usePersons, useQuotes, useTasks, useVenues } from '../data';
+import { blankGig, byId, createGig, mapsLink, personLabel, useGigs, useOrgs, usePersons, useQuotes, useTasks, useVenues } from '../data';
 import { ConflictList, History, MessageComposer, NewTaskButton, StageDialog, TaskRow, Timeline, useConflicts } from '../components/parts';
 import { QuickCreate } from '../components/forms';
-import { nextStage, quoteTotals } from '../domain/pipeline';
+import { nextStage } from '../domain/pipeline';
+import { invoiceTotals, quoteTotals as quoteTotalsFull } from '../../invoicing/domain/money';
 
 type Draft = ReturnType<typeof blankGig>;
 const TABS = ['overview', 'venue', 'client', 'music', 'money', 'timeline', 'tasks', 'history'] as const;
@@ -373,101 +374,39 @@ function MoneyTab({ d, set, gig, dirty }: TabProps & { gig: Gig; dirty: boolean 
         </div>
         <p className="small muted" style={{ marginTop: 'var(--s3)' }}>{t('quote.total')}: <span className="strong">{euro((d.agreedFee ?? 0) + (d.travelFee ?? 0), lang)}</span></p>
       </Section>
-      <QuoteEditor gig={gig} disabled={dirty} />
+      <GigDocuments gig={gig} disabled={dirty} />
       <ReviewBox gig={gig} />
     </>
   );
 }
 
-function QuoteEditor({ gig, disabled }: { gig: Gig; disabled: boolean }) {
+function GigDocuments({ gig, disabled }: { gig: Gig; disabled: boolean }) {
   const { t, lang } = useI18n();
-  const { settings } = useSession();
-  const toast = useToast();
+  const nav = useNavigate();
   const quotes = useQuotes(gig.id).sort((a, b) => b.version - a.version);
-  const products = ((useLiveQuery(() => db.products.toArray(), []) ?? []) as Product[]).filter((p) => !p.deletedAt && p.active);
-  const latest = quotes[0];
-  const [lines, setLines] = useState<QuoteLine[] | null>(null);
-  const [validUntil, setValidUntil] = useState<string | null>(null);
-  const cur = lines ?? latest?.lines ?? [];
-  const valid = validUntil ?? latest?.validUntil ?? '';
-  const editable = !latest || latest.status === 'draft';
-  const totals = quoteTotals(cur);
-  const setLine = (i: number, p: Partial<QuoteLine>) => setLines(cur.map((l, j) => (j === i ? { ...l, ...p } : l)));
-
-  async function persist(status?: Quote['status']) {
-    const base: Partial<Quote> = latest && latest.status === 'draft' ? latest : {};
-    const q = await save<Quote>('quotes', {
-      ...base, gigId: gig.id, version: latest?.status === 'draft' ? latest.version : (latest?.version ?? 0) + 1, status: status ?? 'draft',
-      lines: cur, validUntil: valid || toDateStr(addDays(new Date(), settings.quoteValidDays)),
-      ...(status === 'sent' ? { sentAt: nowIso() } : {}),
-    } as Quote);
-    setLines(null); setValidUntil(null);
-    return q;
-  }
-  async function newVersion() {
-    if (latest) await save<Quote>('quotes', { ...latest, status: 'superseded' });
-    await save<Quote>('quotes', { gigId: gig.id, version: (latest?.version ?? 0) + 1, status: 'draft', lines: latest?.lines.map((l) => ({ ...l, id: uid() })) ?? [],
-      validUntil: toDateStr(addDays(new Date(), settings.quoteValidDays)) } as Quote);
-  }
-  async function markSent() {
-    await persist('sent');
-    if (['enquiry', 'option'].includes(gig.stage)) await changeStage(gig, { to: 'quote_sent' });
-    toast(t('quote.sentOn', { date: fmtDate(toDateStr(new Date()), lang) }));
-  }
-  async function useAsFee() {
-    await save<Gig>('gigs', { ...gig, agreedFee: totals.total });
-    toast(t('common.saved'));
-  }
+  const invoices = ((useLiveQuery(() => db.invoices.where('gigId').equals(gig.id).toArray(), [gig.id]) ?? []) as Invoice[]).filter((i) => !i.deletedAt);
   return (
-    <Section title={`${t('quote.title')}${latest ? ` · ${t('quote.version', { v: latest.version })} · ${t(`quote.status.${latest.status}`)}` : ''}`}
-      actions={latest && !editable ? <button className="btn small" onClick={newVersion}>{t('quote.newVersion')}</button> : undefined}>
-      <div className="stack">
-        <div className="table-wrap">
-          <table className="tbl">
-            <thead><tr><th>{t('quote.line')}</th><th>{t('quote.qty')}</th><th>{t('quote.unit')}</th><th>{t('quote.price')}</th><th>{t('quote.vat')}</th><th style={{ textAlign: 'right' }}>{t('quote.total')}</th>{editable && <th />}</tr></thead>
-            <tbody>
-              {cur.map((l, i) => (
-                <tr key={l.id}>
-                  <td>{editable ? <input className="input" value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} aria-label={t('quote.line')} /> : l.description}</td>
-                  <td style={{ width: 80 }}>{editable ? <input className="input" inputMode="decimal" value={String(l.quantity)} onChange={(e) => setLine(i, { quantity: Number(e.target.value.replace(',', '.')) || 0 })} aria-label={t('quote.qty')} /> : l.quantity}</td>
-                  <td style={{ width: 90 }}>{editable ? (
-                    <select className="input" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value as QuoteLine['unit'] })} aria-label={t('quote.unit')}>
-                      {(['hour', 'piece', 'km', 'flat'] as const).map((u) => <option key={u} value={u}>{t(`unit.${u}`)}</option>)}
-                    </select>) : t(`unit.${l.unit}`)}</td>
-                  <td style={{ width: 110 }}>{editable ? <input className="input" inputMode="decimal" value={inputFromCents(l.unitPrice)} onChange={(e) => setLine(i, { unitPrice: centsFromInput(e.target.value) ?? 0 })} aria-label={t('quote.price')} /> : euro(l.unitPrice, lang)}</td>
-                  <td style={{ width: 70 }}>{editable ? <input className="input" inputMode="numeric" value={String(l.vatRate)} onChange={(e) => setLine(i, { vatRate: Number(e.target.value) || 0 })} aria-label={t('quote.vat')} /> : `${l.vatRate}%`}</td>
-                  <td style={{ textAlign: 'right' }}>{euro(Math.round(l.quantity * l.unitPrice), lang)}</td>
-                  {editable && <td><button className="btn icon small" aria-label={t('common.delete')} onClick={() => setLines(cur.filter((_, j) => j !== i))}>✕</button></td>}
-                </tr>
-              ))}
-              <tr><td colSpan={5} className="muted">{t('quote.subtotal')}</td><td style={{ textAlign: 'right' }}>{euro(totals.ex, lang)}</td>{editable && <td />}</tr>
-              <tr><td colSpan={5} className="muted">{totals.vat === 0 ? t('quote.noVat') : t('quote.vatTotal')}</td><td style={{ textAlign: 'right' }}>{euro(totals.vat, lang)}</td>{editable && <td />}</tr>
-              <tr><td colSpan={5} className="strong">{t('quote.total')}</td><td style={{ textAlign: 'right' }} className="strong">{euro(totals.total, lang)}</td>{editable && <td />}</tr>
-            </tbody>
-          </table>
+    <Section title={t('gig.documents')} actions={<button className="btn small primary" disabled={disabled} onClick={async () => {
+      const { createQuoteForGig } = await import('../../invoicing/data');
+      const q = await createQuoteForGig(gig.id);
+      nav(`/invoicing/quotes/${q.id}`);
+    }}>+ {t('gig.newQuote')}</button>}>
+      {quotes.length + invoices.length === 0 ? <p className="muted small">—</p> : (
+        <div className="list">
+          {quotes.map((q) => (
+            <Link key={q.id} className="list-item" to={`/invoicing/quotes/${q.id}`}>
+              <span className="grow">{t('pdf.quote')} {q.number ?? ''} <span className="muted small">v{q.version}</span></span>
+              <span className="small">{euro(quoteTotalsFull(q).total, lang)}</span><span className="pill">{t(`quote.status.${q.status}`)}</span>
+            </Link>
+          ))}
+          {invoices.map((i) => (
+            <Link key={i.id} className="list-item" to={`/invoicing/invoices/${i.id}`}>
+              <span className="grow">{t(`i.kind.${i.kind as Invoice['kind']}`)} {i.number ?? ''}</span>
+              <span className="small">{euro(invoiceTotals(i).total, lang)}</span><span className="pill">{t(i.status === 'draft' ? 'i.state.draft' : i.status === 'paid' ? 'i.state.paid' : i.status === 'credited' ? 'i.state.credited' : 'i.state.sent')}</span>
+            </Link>
+          ))}
         </div>
-        {editable && (
-          <div className="row">
-            <button className="btn small" onClick={() => setLines([...cur, { id: uid(), description: '', quantity: 1, unit: 'flat', unitPrice: 0, vatRate: settings.defaultVatRate }])}>+ {t('quote.addLine')}</button>
-            <select className="input" style={{ width: 'auto' }} value="" aria-label={t('quote.fromProduct')} onChange={(e) => {
-              const p = products.find((x) => x.id === e.target.value);
-              if (p) setLines([...cur, { id: uid(), description: p.name, quantity: 1, unit: p.unit, unitPrice: p.price, vatRate: p.vatRate }]);
-            }}>
-              <option value="">+ {t('quote.fromProduct')}</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name} · {euro(p.price, lang)}/{t(`unit.${p.unit}`)}</option>)}
-            </select>
-          </div>
-        )}
-        <div className="row" style={{ alignItems: 'flex-end' }}>
-          <Field label={t('quote.validUntil')}><input type="date" disabled={!editable} value={valid} onChange={(e) => setValidUntil(e.target.value)} /></Field>
-          {latest?.sentAt && <span className="small muted">{t('quote.sentOn', { date: fmtDate(latest.sentAt.slice(0, 10), lang) })}</span>}
-        </div>
-        <div className="row">
-          {editable && <button className="btn" disabled={!cur.length} onClick={async () => { await persist(); toast(t('common.saved')); }}>{t('common.save')}</button>}
-          {editable && <button className="btn primary" disabled={!cur.length || disabled} onClick={markSent}>{t('quote.markSent')}</button>}
-          {cur.length > 0 && totals.total !== gig.agreedFee && <button className="btn ghost" disabled={disabled} onClick={useAsFee}>{t('quote.useAsFee')}</button>}
-        </div>
-      </div>
+      )}
     </Section>
   );
 }

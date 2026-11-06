@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type {
-  AuditEntry, AvailabilityBlock, Enquiry, Gig, Interaction, Member, Organisation, Person,
+  AuditEntry, AvailabilityBlock, Enquiry, Gig, Interaction, Invoice, Member, Organisation, Package, Payment, Person,
   Product, Quote, Review, Settings, StatusChange, Task, Template, Venue,
 } from './types';
 
@@ -24,6 +24,10 @@ export class FunqtionDB extends Dexie {
   reviews!: Table<Review, string>;
   audit!: Table<AuditEntry, string>;
   settings!: Table<Settings, string>;
+  // app 2: Quotes & Invoices
+  invoices!: Table<Invoice, string>;
+  payments!: Table<Payment, string>;
+  packages!: Table<Package, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -45,6 +49,13 @@ export class FunqtionDB extends Dexie {
       audit: 'id, rowId, table, at',
       settings: 'key',
     });
+    // App 2 – Quotes & Invoices. Only new/changed tables are listed; the rest carry over.
+    this.version(2).stores({
+      quotes: 'id, gigId, number, status, updatedAt',
+      invoices: 'id, number, series, gigId, quoteId, creditsInvoiceId, personId, status, kind, issueDate, updatedAt',
+      payments: 'id, invoiceId, date, updatedAt',
+      packages: 'id, updatedAt',
+    });
   }
 }
 
@@ -59,6 +70,6 @@ export function useTestDatabase(name: string) {
 /** Tables that hold Base records and take part in audit, backup and merge. */
 export const DATA_TABLES = [
   'persons', 'organisations', 'venues', 'enquiries', 'gigs', 'quotes', 'products', 'statusChanges',
-  'availability', 'tasks', 'interactions', 'templates', 'reviews',
+  'availability', 'tasks', 'interactions', 'templates', 'reviews', 'invoices', 'payments', 'packages',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

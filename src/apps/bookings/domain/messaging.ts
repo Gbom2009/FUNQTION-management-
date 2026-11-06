@@ -25,7 +25,8 @@ export function mailtoLink(email: string | undefined, subject: string, body: str
 
 export const MERGE_FIELDS = [
   'firstName', 'gigTitle', 'gigDate', 'startTime', 'endTime', 'venue', 'city', 'eventType', 'amount',
-  'validUntil', 'reviewLink', 'sender', 'series',
+  'validUntil', 'reviewLink', 'sender', 'series', 'quoteNumber', 'invoiceNumber', 'amountDue', 'dueDate', 'iban',
+  'accountHolder', 'depositPct',
 ] as const;
 
 type Seed = { kind: TemplateKind; language: Lang; name: string; subject?: string; body: string };
@@ -59,4 +60,24 @@ export const DEFAULT_TEMPLATES: Seed[] = [
     body: 'Hoi {{firstName}},\n\nWe kijken nog steeds met plezier terug op {{series}}! Staat er voor volgend jaar al iets op de planning? We houden de datum graag voor jullie vrij.\n\nGroet,\n{{sender}} – Team Funqtion' },
   { kind: 'rebook', language: 'en', name: 'Again next year?', subject: '{{series}} – again next year?',
     body: 'Hi {{firstName}},\n\nWe still look back on {{series}} with a big smile! Are there plans for next year yet? We would love to keep the date free for you.\n\nCheers,\n{{sender}} – Team Funqtion' },
+  { kind: 'quote_send', language: 'nl', name: 'Offerte versturen', subject: 'Offerte {{quoteNumber}} – {{gigTitle}}',
+    body: 'Hoi {{firstName}},\n\nLeuk dat jullie Team Funqtion willen boeken voor {{gigTitle}} op {{gigDate}}! In de bijlage vind je onze offerte ({{quoteNumber}}) van {{amount}}. Kies gerust extra\'s uit de offerte; die nemen we dan mee.\n\nAkkoord? Laat het ons weten door op dit bericht te reageren met "akkoord" (en welke extra\'s je wilt). Daarna sturen we de aanbetalingsfactuur van {{depositPct}}% en staat de datum vast. De offerte is geldig tot {{validUntil}}; onze algemene voorwaarden staan erin.\n\nGroet,\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
+  { kind: 'quote_send', language: 'en', name: 'Send quote', subject: 'Quote {{quoteNumber}} – {{gigTitle}}',
+    body: 'Hi {{firstName}},\n\nGreat that you want to book Team Funqtion for {{gigTitle}} on {{gigDate}}! Attached is our quote ({{quoteNumber}}) of {{amount}}. Feel free to pick extras from the quote and we will include them.\n\nHappy with it? Just reply "agreed" (and which extras you want). We will then send the deposit invoice of {{depositPct}}% and the date is yours. The quote is valid until {{validUntil}} and includes our terms and conditions.\n\nCheers,\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
+  { kind: 'invoice_send', language: 'nl', name: 'Factuur versturen', subject: 'Factuur {{invoiceNumber}} – {{gigTitle}}',
+    body: 'Hoi {{firstName}},\n\nIn de bijlage vind je factuur {{invoiceNumber}} voor {{gigTitle}}. Het bedrag van {{amountDue}} kun je uiterlijk {{dueDate}} overmaken naar {{iban}} t.n.v. {{accountHolder}}, onder vermelding van {{invoiceNumber}}.\n\nDank je wel!\n{{sender}} – Team Funqtion' },
+  { kind: 'invoice_send', language: 'en', name: 'Send invoice', subject: 'Invoice {{invoiceNumber}} – {{gigTitle}}',
+    body: 'Hi {{firstName}},\n\nAttached is invoice {{invoiceNumber}} for {{gigTitle}}. Please transfer {{amountDue}} by {{dueDate}} to {{iban}} in the name of {{accountHolder}}, quoting {{invoiceNumber}}.\n\nThank you!\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_1', language: 'nl', name: 'Herinnering 1 – vriendelijk', subject: 'Herinnering factuur {{invoiceNumber}}',
+    body: 'Hoi {{firstName}},\n\nMisschien is het er even bij ingeschoten: factuur {{invoiceNumber}} van {{amountDue}} stond open tot {{dueDate}}. Zou je het bedrag willen overmaken naar {{iban}} t.n.v. {{accountHolder}}, onder vermelding van {{invoiceNumber}}? Is het al betaald, dan kun je dit bericht negeren.\n\nGroet,\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_1', language: 'en', name: 'Reminder 1 – friendly', subject: 'Reminder invoice {{invoiceNumber}}',
+    body: 'Hi {{firstName}},\n\nMaybe it slipped through: invoice {{invoiceNumber}} of {{amountDue}} was due on {{dueDate}}. Could you transfer the amount to {{iban}} in the name of {{accountHolder}}, quoting {{invoiceNumber}}? If you have already paid, please ignore this message.\n\nCheers,\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_2', language: 'nl', name: 'Herinnering 2 – dringend', subject: 'Tweede herinnering factuur {{invoiceNumber}}',
+    body: 'Beste {{firstName}},\n\nWe hebben de betaling van factuur {{invoiceNumber}} ({{amountDue}}, vervallen op {{dueDate}}) nog niet ontvangen. We vragen je het bedrag binnen 7 dagen over te maken naar {{iban}} t.n.v. {{accountHolder}}, onder vermelding van {{invoiceNumber}}. Is er iets mis met de factuur, neem dan contact met ons op.\n\nMet vriendelijke groet,\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_2', language: 'en', name: 'Reminder 2 – firm', subject: 'Second reminder invoice {{invoiceNumber}}',
+    body: 'Dear {{firstName}},\n\nWe have not yet received payment of invoice {{invoiceNumber}} ({{amountDue}}, due {{dueDate}}). Please transfer the amount within 7 days to {{iban}} in the name of {{accountHolder}}, quoting {{invoiceNumber}}. If something is wrong with the invoice, please contact us.\n\nKind regards,\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_3', language: 'nl', name: 'Aanmaning (14-dagenbrief)', subject: 'Aanmaning factuur {{invoiceNumber}}',
+    body: 'Beste {{firstName}},\n\nOndanks eerdere herinneringen is factuur {{invoiceNumber}} van {{amountDue}} (vervallen op {{dueDate}}) nog niet betaald.\n\nWij verzoeken je dit bedrag binnen 14 dagen na ontvangst van deze aanmaning over te maken naar {{iban}} t.n.v. {{accountHolder}}, onder vermelding van {{invoiceNumber}}.\n\nBetaal je niet binnen deze termijn, dan zijn wij genoodzaakt buitengerechtelijke incassokosten in rekening te brengen volgens de wettelijke staffel (bij dit bedrag: [BEDRAG INVULLEN], minimaal € 40), vermeerderd met de wettelijke rente.\n\nMet vriendelijke groet,\n{{sender}} – Team Funqtion' },
+  { kind: 'reminder_3', language: 'en', name: 'Final notice (14 days)', subject: 'Final notice invoice {{invoiceNumber}}',
+    body: 'Dear {{firstName}},\n\nDespite earlier reminders, invoice {{invoiceNumber}} of {{amountDue}} (due {{dueDate}}) has not been paid.\n\nPlease transfer this amount within 14 days of receiving this notice to {{iban}} in the name of {{accountHolder}}, quoting {{invoiceNumber}}.\n\nIf payment is not received within this term, we will charge extrajudicial collection costs according to the statutory scale (for this amount: [FILL IN AMOUNT], minimum € 40), plus statutory interest.\n\nKind regards,\n{{sender}} – Team Funqtion' },
 ];

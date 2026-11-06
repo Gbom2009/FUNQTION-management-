@@ -1,4 +1,5 @@
-import type { Assignee, Enquiry, Gig, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
+import type { Assignee, Enquiry, Gig, Invoice, Payment, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
+import { invoiceState } from '../../invoicing/domain/money';
 import { addDays, addMonths, at, parseDate } from '../../../core/dates';
 
 // The reminder engine is a pure function: given the current data it returns
@@ -16,6 +17,7 @@ export interface DesiredTask {
   enquiryId?: string;
   personId?: string;
   templateKind?: TemplateKind;
+  invoiceId?: string;
   /** i18n params for the title */
   params: Record<string, string>;
 }
@@ -23,7 +25,7 @@ export interface DesiredTask {
 const STALE_DAYS = 60; // never generate tasks that were due more than this long ago
 
 export function desiredTasks(
-  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[] },
+  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[]; invoices?: Invoice[]; payments?: Payment[] },
   s: Settings,
   now = new Date(),
 ): DesiredTask[] {
@@ -47,6 +49,10 @@ export function desiredTasks(
     if (q.deletedAt) continue;
     quotesByGig.set(q.gigId, [...(quotesByGig.get(q.gigId) ?? []), q]);
   }
+  const invoices = (data.invoices ?? []).filter((i) => !i.deletedAt);
+  const payments = data.payments ?? [];
+  const gigsWithBill = new Set(invoices.filter((i) => i.status !== 'draft' && (i.kind === 'final' || i.kind === 'standard')).map((i) => i.gigId));
+  const gigsWithAnyInvoice = new Set(invoices.filter((i) => i.status !== 'draft').map((i) => i.gigId));
   const reviewed = new Set(data.reviews.filter((r) => !r.deletedAt && (r.requestedAt || r.receivedAt)).map((r) => r.gigId));
 
   for (const g of data.gigs) {
@@ -95,7 +101,7 @@ export function desiredTasks(
       }
     }
 
-    if (g.stage === 'played') {
+    if (g.stage === 'played' && !gigsWithBill.has(g.id)) {
       push({ ruleKey: `invoice:${g.id}`, kind: 'invoice', assignedTo: owner, gigId: g.id,
         dueAt: dayAfter.toISOString(), params: p });
     }
@@ -105,7 +111,7 @@ export function desiredTasks(
         dueAt: addDays(at(g.date, '12:00'), s.reviewDays).toISOString(), templateKind: 'thank_you_review', params: p });
     }
 
-    if (g.stage === 'invoiced') {
+    if (g.stage === 'invoiced' && !gigsWithAnyInvoice.has(g.id)) {
       const from = g.invoicedAt ? new Date(g.invoicedAt) : dayAfter;
       push({ ruleKey: `payment:${g.id}`, kind: 'payment', assignedTo: owner, gigId: g.id,
         dueAt: addDays(from, s.paymentCheckDays).toISOString(), params: p });
@@ -120,6 +126,21 @@ export function desiredTasks(
           params: { ...p, series: g.seriesName } });
       }
     }
+  }
+  // Payment reminders (dunning) for sent invoices: friendly, firm, formal.
+  const today = now.toISOString().slice(0, 10);
+  for (const inv of invoices) {
+    if (inv.kind === 'credit_note' || inv.status !== 'sent' || inv.dunningPaused || !inv.dueDate) continue;
+    const st = invoiceState(inv, payments, today);
+    if (st === 'paid' || st === 'credited') continue;
+    const gig = data.gigs.find((g) => g.id === inv.gigId);
+    const owner: Assignee = gig?.ownerId ?? (inv.createdBy === 'system' ? 'gijs' : inv.createdBy);
+    const levels: [number, TemplateKind][] = [[s.dunning1Days, 'reminder_1'], [s.dunning2Days, 'reminder_2'], [s.dunning3Days, 'reminder_3']];
+    levels.forEach(([days, tpl], i) => {
+      const due = addDays(at(inv.dueDate!, '09:00'), days);
+      push({ ruleKey: `dun${i + 1}:${inv.id}`, kind: 'dunning', assignedTo: owner, gigId: inv.gigId, personId: inv.personId, invoiceId: inv.id,
+        dueAt: due.toISOString(), templateKind: tpl, params: { number: inv.number ?? '', level: String(i + 1), name: inv.client.name } });
+    });
   }
   return out;
 }

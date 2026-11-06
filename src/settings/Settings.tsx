@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../core/db';
 import { useI18n, type Key } from '../core/i18n';
 import { hashPin, useSession } from '../core/session';
 import { Field, Section, useToast } from '../core/ui';
-import { centsFromInput, inputFromCents } from '../core/format';
 import { download, exportAll, importMerge, type BackupFile } from '../core/backup';
 import { save, softDelete, uid } from '../core/repo';
 import { loadDemo } from '../core/demo';
-import { TEMPLATE_KINDS, type Product, type Settings as S, type Template } from '../core/types';
+import { TEMPLATE_KINDS, type Settings as S, type Template } from '../core/types';
 import { MERGE_FIELDS } from '../apps/bookings/domain/messaging';
 import { runTaskSync } from '../apps/bookings/domain/taskSync';
 
@@ -115,36 +115,10 @@ export default function Settings() {
           </div>
         </Section>
       </div>
-      <Products />
+      <Section title={t('settings.products')}><Link className="btn small" to="/invoicing/catalog">{t('inv.catalog')} →</Link></Section>
       <Templates />
       <p className="tiny muted">{t('settings.version')} {__APP_VERSION__} · {t('app.tagline')}</p>
     </div>
-  );
-}
-
-function Products() {
-  const { t } = useI18n();
-  const products = ((useLiveQuery(() => db.products.toArray(), []) ?? []) as Product[]).filter((p) => !p.deletedAt);
-  return (
-    <Section title={t('settings.products')} actions={<button className="btn small" onClick={() => save<Product>('products', { name: '', unit: 'flat', price: 0, vatRate: 0, active: true } as Product)}>+ {t('settings.newProduct')}</button>}>
-      <div className="table-wrap">
-        <table className="tbl">
-          <thead><tr><th>{t('common.name')}</th><th>{t('quote.unit')}</th><th>{t('quote.price')}</th><th>{t('quote.vat')}</th><th /></tr></thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <td><input className="input" defaultValue={p.name} onBlur={(e) => e.target.value !== p.name && save<Product>('products', { ...p, name: e.target.value })} aria-label={t('common.name')} /></td>
-                <td style={{ width: 110 }}><select className="input" value={p.unit} onChange={(e) => save<Product>('products', { ...p, unit: e.target.value as Product['unit'] })} aria-label={t('quote.unit')}>
-                  {(['hour', 'piece', 'km', 'flat'] as const).map((u) => <option key={u} value={u}>{t(`unit.${u}`)}</option>)}</select></td>
-                <td style={{ width: 120 }}><input className="input" inputMode="decimal" defaultValue={inputFromCents(p.price)} onBlur={(e) => save<Product>('products', { ...p, price: centsFromInput(e.target.value) ?? 0 })} aria-label={t('quote.price')} /></td>
-                <td style={{ width: 80 }}><input className="input" inputMode="numeric" defaultValue={String(p.vatRate)} onBlur={(e) => save<Product>('products', { ...p, vatRate: Number(e.target.value) || 0 })} aria-label={t('quote.vat')} /></td>
-                <td><button className="btn icon small" aria-label={t('common.delete')} onClick={() => softDelete('products', p.id)}>✕</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
   );
 }
 

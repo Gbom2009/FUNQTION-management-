@@ -15,7 +15,7 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 | # | App | Status |
 |---|---|---|
 | 01 | **Bookings & CRM** – enquiries, clients, pipeline, calendar, reminders | ✅ v0.1 |
-| 02 | **Quotes & Invoices** – quotes, online acceptance, deposit/final invoices, payments, reminders | 📝 [planned](docs/quotes-invoices/PLAN.md) |
+| 02 | **Quotes & Invoices** – quotes with packages and optional extras, acceptance, deposit/final/cancellation invoices, credit notes, payments, reminders, branded PDFs | ✅ v0.1 ([plan](docs/quotes-invoices/PLAN.md)) |
 | 03 | Contracts | planned |
 | 04 | Gig-day planner | planned |
 | 05 | Gear | planned |
@@ -49,4 +49,5 @@ Local-first: everything is stored on the device (IndexedDB) and works offline. U
 
 - [Bookings & CRM — functional plan](docs/bookings-crm/PLAN.md)
 - [Quotes & Invoices — functional plan](docs/quotes-invoices/PLAN.md)
+- [Draft general terms (algemene voorwaarden)](docs/legal/ALGEMENE-VOORWAARDEN.md)
 - [Architecture: how the apps fit together](docs/ARCHITECTURE.md)
