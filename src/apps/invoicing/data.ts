@@ -76,7 +76,7 @@ export async function newQuoteVersion(q: Quote): Promise<Quote> {
     lines: q.lines.map((l) => ({ ...l, id: uid() })), validUntil: toDateStr(addDays(new Date(), s.quoteValidDays)), vatMode: s.vatMode });
 }
 
-async function assignQuoteNumber(q: Quote, me: MemberId) {
+export async function assignQuoteNumber(q: Quote, me: MemberId) {
   if (q.number) return q.number;
   const all = await db.quotes.toArray();
   return nextNumber(seriesFor('quote', new Date().getFullYear(), me), all.map((x) => x.number));
@@ -94,25 +94,51 @@ export async function markQuoteSent(q: Quote, me: MemberId): Promise<Quote> {
   return saved;
 }
 
-/** Record the client's acceptance. Returns 'conflict' when the gig could not be confirmed automatically. */
-export async function acceptQuote(q: Quote, me: MemberId, a: { name: string; via: NonNullable<Quote['acceptedVia']>; note?: string; selected: string[] }) {
+export interface AcceptanceInput { name: string; via: NonNullable<Quote['acceptedVia']>; note?: string; selected: string[] }
+
+/** Mark the quote accepted (with the chosen extras) and copy fee + deposit to the gig. Does not change the gig stage. */
+export async function recordQuoteAcceptance(q: Quote, me: MemberId, a: AcceptanceInput): Promise<Quote> {
   const s = await settings();
   const lines = q.lines.map((l) => (l.optional ? { ...l, selected: a.selected.includes(l.id) } : l));
   const accepted = await save<Quote>('quotes', { ...q, lines, status: 'accepted', acceptedAt: nowIso(), acceptedBy: a.name, acceptedVia: a.via,
     acceptedNote: a.note, number: await assignQuoteNumber(q, me), issueDate: q.issueDate ?? todayStr(), seller: q.seller ?? sellerSnapshot(s) });
   const gig = await db.gigs.get(q.gigId);
-  if (!gig) return 'ok' as const;
-  const total = quoteTotals(accepted).total;
-  await save<Gig>('gigs', { ...gig, agreedFee: total, deposit: Math.round((total * (accepted.depositPct ?? s.depositPct)) / 100) });
-  const fresh = (await db.gigs.get(gig.id))!;
-  if (['enquiry', 'option', 'quote_sent'].includes(fresh.stage)) {
-    const gigs = alive(await db.gigs.toArray());
-    const blocks = alive(await db.availability.toArray());
-    if (findConflicts({ ...fresh, stage: 'confirmed' }, gigs, blocks, s).some((c) => c.level === 'hard')) { runTaskSync(); return 'conflict' as const; }
-    await changeStage(fresh, { to: 'confirmed', note: `${a.name} (${a.via})` });
+  if (gig) {
+    const total = quoteTotals(accepted).total;
+    await save<Gig>('gigs', { ...gig, agreedFee: total, deposit: Math.round((total * (accepted.depositPct ?? s.depositPct)) / 100) });
   }
+  return accepted;
+}
+
+/** Confirm the gig unless that would create a hard conflict. */
+export async function confirmGigIfFree(gigId: string, note: string): Promise<'ok' | 'conflict'> {
+  const s = await settings();
+  const fresh = await db.gigs.get(gigId);
+  if (!fresh || !['enquiry', 'option', 'quote_sent'].includes(fresh.stage)) return 'ok';
+  const gigs = alive(await db.gigs.toArray());
+  const blocks = alive(await db.availability.toArray());
+  if (findConflicts({ ...fresh, stage: 'confirmed' }, gigs, blocks, s).some((c) => c.level === 'hard')) return 'conflict';
+  await changeStage(fresh, { to: 'confirmed', note });
+  return 'ok';
+}
+
+/**
+ * Record the client's acceptance. Returns 'conflict' when the gig could not be confirmed automatically,
+ * and 'contract' when this event type needs a signed contract first (App 4).
+ */
+export async function acceptQuote(q: Quote, me: MemberId, a: AcceptanceInput): Promise<'ok' | 'conflict' | 'contract'> {
+  const accepted = await recordQuoteAcceptance(q, me, a);
+  const gig = await db.gigs.get(q.gigId);
+  if (!gig) return 'ok';
+  const { flowForGig, onQuoteAccepted } = await import('../contracts/data');
+  if ((await flowForGig(gig)) !== 'none') {
+    const r = await onQuoteAccepted(accepted, me, a);
+    runTaskSync();
+    return r;
+  }
+  const r = await confirmGigIfFree(gig.id, `${a.name} (${a.via})`);
   runTaskSync();
-  return 'ok' as const;
+  return r;
 }
 
 export async function declineQuote(q: Quote, reason: string, note?: string) {
@@ -153,21 +179,23 @@ export async function createBlankInvoice(gigId?: string): Promise<Invoice> {
     language: s.language, supplyDate: gig?.date, lines: [], client: gig ? await clientSnapshotForGig(gig) : { name: '', address: '' }, vatMode: s.vatMode });
 }
 
-/** Cancellation by the client: fee from the scale minus deposits already invoiced. */
-export async function cancellationPreview(q: Quote) {
+/** Cancellation by the client: fee from the scale minus deposits already invoiced. Consumers get the softer scale. */
+export async function cancellationPreview(q: Quote, override?: { pct: number; days: number }) {
   const s = await settings();
   const gig = await db.gigs.get(q.gigId);
   const total = quoteTotals(q).total;
-  const { pct, days } = cancellationPct(s.cancellationScale, gig?.date ?? todayStr());
+  const business = !!gig?.clientOrganisationId;
+  const scale = !business && s.cancellationScaleConsumer?.length ? s.cancellationScaleConsumer : s.cancellationScale;
+  const { pct, days } = override ?? cancellationPct(scale, gig?.date ?? todayStr());
   const fee = Math.round((total * pct) / 100);
   const deposits = alive(await db.invoices.where('quoteId').equals(q.id).toArray()).filter((i) => i.kind === 'deposit' && i.status !== 'draft' && i.status !== 'credited');
   const depositTotal = deposits.reduce((sum, d) => sum + invoiceTotals(d).total, 0);
   return { pct, days, fee, total, deposits, depositTotal, gig };
 }
 
-export async function createCancellationInvoice(q: Quote, cancelGig: boolean): Promise<Invoice> {
+export async function createCancellationInvoice(q: Quote, cancelGig: boolean, override?: { pct: number; days: number }): Promise<Invoice> {
   const s = await settings();
-  const pv = await cancellationPreview(q);
+  const pv = await cancellationPreview(q, override);
   const lang = q.language ?? s.language;
   const tt = quoteTotals(q);
   // One fee line per VAT rate of the agreed quote, so VAT follows the quote.

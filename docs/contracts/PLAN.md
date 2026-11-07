@@ -2,6 +2,14 @@
 
 > App 4 of the Funqtion suite. **FEEL THE MUSIQ.**
 > Status: functional plan, no code yet. Builds on App 1 (Bookings & CRM), App 2 (Quotes & Invoices) and App 3 (Money & Accounting), all live in this repo in local mode.
+> **Decisions made (v0.4.0 build)**: these replace the matching recommendations below.
+> - **Local mode first (phase A):** no server. The client signs on our phone/tablet (`/contracts/:id/sign`), replies "akkoord" (recorded with a screenshot as evidence), or returns a signed PDF. The online signing relay (phase B) is not built yet.
+> - **Quote + contract per event type** (template setting `flow`): *together* (wedding, private party: quote and contract go out at once, one "akkoord" covers both and confirms the gig), *after quote* (company, village festival: quote acceptance holds the date, the signature confirms), *none* (club night: quote acceptance is enough). Editable in Contracts → Library.
+> - **Cancellation:** a softer consumer scale (>6 months 10%, 3–6 months 25%, 1–3 months 50%, 2–4 weeks 75%, <14 days 100%); the existing scale stays for business clients. Terms bumped to version 2026-12 (art. 3.2 and 8.2).
+> - **Countersigning is automatic** by whoever records the signature (their signature is drawn once in Contracts → Settings).
+> - **Photo/video:** allowed by default, the client can opt out when signing.
+> - Not built yet: the signing relay, automatic e-mail, "viewed" tracking, a merged "current text" view, RFC 3161 timestamps and PAdES seals, supplementary deposit invoices after a price increase.
+>
 > The legal points are a practical summary for a small Dutch DJ duo, **not legal advice**. Items marked ⚖️ should be checked by a lawyer (or compared with a branch model) before you rely on them. The clause texts in §4 are drafts in the same status as [`docs/legal/ALGEMENE-VOORWAARDEN.md`](../legal/ALGEMENE-VOORWAARDEN.md).
 
 ## Contents

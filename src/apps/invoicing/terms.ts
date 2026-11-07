@@ -1,9 +1,9 @@
 // Draft general terms (algemene voorwaarden) for Team Funqtion.
 // DRAFT – have this checked by a lawyer or a branch association template
-// before relying on it. {{cancellationScale}}, {{paymentTermDays}} and
+// before relying on it. {{cancellationScale}} (business), {{cancellationScaleConsumer}}, {{paymentTermDays}} and
 // {{depositPct}} are filled in from Settings when printed.
 
-export const TERMS_VERSION = '2026-11';
+export const TERMS_VERSION = '2026-12';
 
 export const TERMS_NL = `ALGEMENE VOORWAARDEN TEAM FUNQTION (versie ${TERMS_VERSION})
 
@@ -19,7 +19,7 @@ export const TERMS_NL = `ALGEMENE VOORWAARDEN TEAM FUNQTION (versie ${TERMS_VERS
 
 3. Offertes en totstandkoming
 3.1 Offertes zijn vrijblijvend en geldig tot de op de offerte vermelde datum.
-3.2 De overeenkomst komt tot stand zodra de opdrachtgever de offerte schriftelijk accepteert (ook per e-mail of WhatsApp) of een aanbetaling doet.
+3.2 Stuurt Funqtion een gig-overeenkomst, dan komt de overeenkomst tot stand zodra de opdrachtgever die ondertekent of schriftelijk accepteert (ook per e-mail of WhatsApp). Stuurt Funqtion geen gig-overeenkomst, dan komt de overeenkomst tot stand zodra de opdrachtgever de offerte schriftelijk accepteert of een aanbetaling doet.
 3.3 Een optie op een datum is vrijblijvend en vervalt automatisch op de vermelde vervaldatum.
 3.4 Het optreden betreft vrijetijdsbesteding op een specifieke datum. Het wettelijke herroepingsrecht (bedenktijd) is daarom niet van toepassing (art. 6:230p sub e BW).
 
@@ -46,7 +46,10 @@ export const TERMS_NL = `ALGEMENE VOORWAARDEN TEAM FUNQTION (versie ${TERMS_VERS
 
 8. Annulering door de opdrachtgever
 8.1 Annuleren kan alleen schriftelijk (ook per e-mail of WhatsApp). De datum van ontvangst geldt als annuleringsdatum.
-8.2 Bij annulering is de opdrachtgever de volgende vergoeding verschuldigd over het afgesproken totaalbedrag:
+8.2 Bij annulering is de opdrachtgever de volgende vergoeding verschuldigd over het afgesproken totaalbedrag.
+Consumenten (particuliere opdrachtgevers):
+{{cancellationScaleConsumer}}
+Zakelijke opdrachtgevers (bedrijven, verenigingen, stichtingen, overheden):
 {{cancellationScale}}
 8.3 Een al betaalde aanbetaling wordt met deze vergoeding verrekend. Is de aanbetaling hoger dan de vergoeding, dan wordt het verschil terugbetaald.
 8.4 Verplaatsen naar een andere datum is in overleg mogelijk en geldt niet als annulering als de nieuwe datum binnen 12 maanden valt en Funqtion dan beschikbaar is.
@@ -89,7 +92,7 @@ export const TERMS_EN = `GENERAL TERMS AND CONDITIONS TEAM FUNQTION (version ${T
 
 3. Quotes and agreement
 3.1 Quotes are without obligation and valid until the date stated on the quote.
-3.2 The agreement is concluded as soon as the client accepts the quote in writing (including e-mail or WhatsApp) or pays a deposit.
+3.2 If Funqtion sends a gig agreement, the agreement is concluded as soon as the client signs it or accepts it in writing (including e-mail or WhatsApp). If Funqtion does not send a gig agreement, the agreement is concluded as soon as the client accepts the quote in writing or pays a deposit.
 3.3 An option on a date is non-binding and expires automatically on the stated expiry date.
 3.4 The performance is a leisure service on a specific date. The statutory right of withdrawal (cooling-off period) therefore does not apply (art. 6:230p(e) Dutch Civil Code).
 
@@ -116,7 +119,10 @@ export const TERMS_EN = `GENERAL TERMS AND CONDITIONS TEAM FUNQTION (version ${T
 
 8. Cancellation by the client
 8.1 Cancellation must be made in writing (including e-mail or WhatsApp). The date of receipt is the cancellation date.
-8.2 On cancellation the client owes the following fee on the agreed total:
+8.2 On cancellation the client owes the following fee on the agreed total.
+Consumers (private clients):
+{{cancellationScaleConsumer}}
+Business clients (companies, associations, foundations, public bodies):
 {{cancellationScale}}
 8.3 A deposit already paid is offset against this fee. If the deposit exceeds the fee, the difference is refunded.
 8.4 Moving to another date is possible by agreement and does not count as a cancellation if the new date is within 12 months and Funqtion is available.
@@ -145,14 +151,11 @@ export const TERMS_EN = `GENERAL TERMS AND CONDITIONS TEAM FUNQTION (version ${T
 15. Governing law
 15.1 Dutch law applies to all agreements. Disputes are submitted to the competent court in the district of Oost-Brabant, unless the law designates another court.`;
 
-/** Fill in the placeholders from settings. */
-export function renderTerms(
-  text: string,
-  s: { cancellationScale: { daysBefore: number; pct: number }[]; paymentTermDays: number; depositPct: number },
-  lang: 'nl' | 'en',
-) {
-  const sorted = [...s.cancellationScale].sort((a, b) => b.daysBefore - a.daysBefore);
-  const scale = sorted.map((r, i) => {
+type Scale = { daysBefore: number; pct: number }[];
+
+function scaleText(scale: Scale, lang: 'nl' | 'en') {
+  const sorted = [...scale].sort((a, b) => b.daysBefore - a.daysBefore);
+  return sorted.map((r, i) => {
     const prev = sorted[i - 1];
     if (lang === 'nl') {
       return i === 0
@@ -163,8 +166,20 @@ export function renderTerms(
       ? `   - ${r.daysBefore} days or more before the performance: ${r.pct}%`
       : `   - ${r.daysBefore === 0 ? 'less than ' + prev.daysBefore + ' days before or on the day' : `${r.daysBefore} to ${prev.daysBefore} days before the performance`}: ${r.pct}%`;
   }).join('\n');
+}
+
+/** Fill in the placeholders from settings. */
+export function renderTerms(
+  text: string,
+  s: { cancellationScale: Scale; cancellationScaleConsumer?: Scale; paymentTermDays: number; depositPct: number },
+  lang: 'nl' | 'en',
+) {
   return text
-    .split('{{cancellationScale}}').join(scale)
+    .split('{{cancellationScaleConsumer}}').join(scaleText(s.cancellationScaleConsumer?.length ? s.cancellationScaleConsumer : s.cancellationScale, lang))
+    .split('{{cancellationScale}}').join(scaleText(s.cancellationScale, lang))
     .split('{{paymentTermDays}}').join(String(s.paymentTermDays))
     .split('{{depositPct}}').join(String(s.depositPct));
 }
+
+/** True when the stored terms are an older default text (not edited by hand). */
+export const isOutdatedDefaultTerms = (text: string) => /\(versi(e|on) 2026-11\)/.test(text.split('\n')[0] ?? '');

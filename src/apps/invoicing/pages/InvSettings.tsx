@@ -2,7 +2,7 @@ import { useI18n, type Key } from '../../../core/i18n';
 import { useSession } from '../../../core/session';
 import { Field, Section } from '../../../core/ui';
 import type { Settings as S, VatMode } from '../../../core/types';
-import { TERMS_EN, TERMS_NL } from '../terms';
+import { TERMS_EN, TERMS_NL, TERMS_VERSION, isOutdatedDefaultTerms } from '../terms';
 import { runTaskSync } from '../../bookings/domain/taskSync';
 
 export default function InvSettings() {
@@ -19,8 +19,24 @@ export default function InvSettings() {
   const num = (k: keyof S, label: Key) => (
     <Field label={t(label)}><input inputMode="numeric" value={String(settings[k] ?? '')} onChange={(e) => { updateSettings({ [k]: Number(e.target.value) || 0 } as Partial<S>); }} onBlur={() => runTaskSync()} /></Field>
   );
-  const scale = [...settings.cancellationScale].sort((a, b) => b.daysBefore - a.daysBefore);
-  const setScale = (s: S['cancellationScale']) => updateSettings({ cancellationScale: s });
+  const scaleEditor = (key: 'cancellationScale' | 'cancellationScaleConsumer') => {
+    const scale = [...(settings[key] ?? [])].sort((a, b) => b.daysBefore - a.daysBefore);
+    const setScale = (s: S['cancellationScale']) => updateSettings({ [key]: s } as Partial<S>);
+    return (
+      <div className="stack">
+        {scale.map((r, i) => (
+          <div key={i} className="row">
+            <label className="field" style={{ flex: 1 }}><span>{t('s.scaleDays')}</span>
+              <input className="input" inputMode="numeric" value={r.daysBefore} onChange={(e) => setScale(scale.map((x, j) => (j === i ? { ...x, daysBefore: Number(e.target.value) || 0 } : x)))} /></label>
+            <label className="field" style={{ width: 110 }}><span>{t('s.scalePct')}</span>
+              <input className="input" inputMode="numeric" value={r.pct} onChange={(e) => setScale(scale.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) || 0 } : x)))} /></label>
+            <button className="btn icon small" style={{ alignSelf: 'flex-end' }} aria-label={t('common.delete')} onClick={() => setScale(scale.filter((_, j) => j !== i))}>✕</button>
+          </div>
+        ))}
+        <div><button className="btn small" onClick={() => setScale([...scale, { daysBefore: 0, pct: 100 }])}>{t('s.addScale')}</button></div>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -67,19 +83,13 @@ export default function InvSettings() {
             {num('dunning3Days', 's.dun3')}
           </div>
         </Section>
-        <Section title={t('s.scale')}>
-          <div className="stack">
-            {scale.map((r, i) => (
-              <div key={i} className="row">
-                <label className="field" style={{ flex: 1 }}><span>{t('s.scaleDays')}</span>
-                  <input className="input" inputMode="numeric" value={r.daysBefore} onChange={(e) => setScale(scale.map((x, j) => (j === i ? { ...x, daysBefore: Number(e.target.value) || 0 } : x)))} /></label>
-                <label className="field" style={{ width: 110 }}><span>{t('s.scalePct')}</span>
-                  <input className="input" inputMode="numeric" value={r.pct} onChange={(e) => setScale(scale.map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) || 0 } : x)))} /></label>
-                <button className="btn icon small" style={{ alignSelf: 'flex-end' }} aria-label={t('common.delete')} onClick={() => setScale(scale.filter((_, j) => j !== i))}>✕</button>
-              </div>
-            ))}
-            <div><button className="btn small" onClick={() => setScale([...scale, { daysBefore: 0, pct: 100 }])}>{t('s.addScale')}</button></div>
-          </div>
+        <Section title={t('s.scaleConsumer')}>
+          <p className="tiny muted">{t('s.scaleConsumerHint')}</p>
+          {scaleEditor('cancellationScaleConsumer')}
+        </Section>
+        <Section title={t('s.scaleBusiness')}>
+          <p className="tiny muted">{t('s.scaleBusinessHint')}</p>
+          {scaleEditor('cancellationScale')}
         </Section>
         <Section title={t('pdf.vat')}>
           <div className="stack">
@@ -90,6 +100,10 @@ export default function InvSettings() {
       </div>
       <Section title={t('s.terms')} actions={<button className="btn small ghost" onClick={() => updateSettings({ termsNl: TERMS_NL, termsEn: TERMS_EN })}>{t('s.resetTerms')}</button>}>
         <p className="small muted">{t('s.termsHint')}</p>
+        {(isOutdatedDefaultTerms(settings.termsNl) || isOutdatedDefaultTerms(settings.termsEn)) && (
+          <div className="banner warn" style={{ marginBottom: 'var(--s3)' }}><span>!</span><div className="txt">{t('s.termsOutdated', { version: TERMS_VERSION })}
+            <div style={{ marginTop: 'var(--s2)' }}><button className="btn small primary" onClick={() => updateSettings({ termsNl: TERMS_NL, termsEn: TERMS_EN })}>{t('s.termsUpdate', { version: TERMS_VERSION })}</button></div></div></div>
+        )}
         <div className="grid2">
           <Field label={t('s.terms')}><textarea key={'nl' + settings.termsNl.length} rows={16} defaultValue={settings.termsNl} onBlur={(e) => updateSettings({ termsNl: e.target.value })} style={{ fontSize: 12 }} /></Field>
           <Field label={t('s.termsEn')}><textarea key={'en' + settings.termsEn.length} rows={16} defaultValue={settings.termsEn} onBlur={(e) => updateSettings({ termsEn: e.target.value })} style={{ fontSize: 12 }} /></Field>

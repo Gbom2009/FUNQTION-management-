@@ -285,3 +285,48 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: var(--fq-size-dat
 }
 /* Editors with a save bar: hide the floating + so it never covers "Opslaan". */
 body:has(.savebar) .fab { display: none; }
+
+/* ---- App 4: Contracts ---------------------------------------------------
+   The agreement is shown as paper (white, near-black text, one orange accent)
+   in every theme, exactly like the PDF the client receives. */
+.paper {
+  background: #fff; color: #141414; padding: var(--s5); border: 1px solid #cfcfcf; font-size: 14px; line-height: 1.5;
+  font-family: var(--fq-font-mono); font-weight: 300; overflow-wrap: anywhere;
+}
+.paper.draft { box-shadow: inset 0 4px 0 var(--fq-accent); }
+.paper strong, .paper h4 { color: #141414; font-weight: 400; }
+.paper h4 { margin: var(--s4) 0 var(--s1); font-size: 15px; }
+.paper p { margin: 0 0 var(--s2); }
+.paper ul { margin: 0 0 var(--s2); padding-left: 1.2em; }
+.paper li::marker { color: #f68712; }
+.paper .pre { white-space: pre-line; }
+.paper .small { font-size: 12px; }
+.paper-dim { color: #6b6b6b; }
+.paper-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b6b6b; margin-bottom: 4px; }
+.paper-head { display: grid; gap: var(--s4); border-bottom: 2px solid #f68712; padding-bottom: var(--s4); margin-bottom: var(--s4); }
+.paper-title { font-family: var(--fq-font-display); font-size: 26px; text-transform: uppercase; line-height: 1; }
+.paper-parties { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s4); font-size: 13px; }
+.paper-summary { border: 1px solid #141414; border-left: 4px solid #f68712; padding: var(--s3) var(--s4); margin-bottom: var(--s4); }
+.paper-summary dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px var(--s4); margin: 0; font-size: 13px; }
+.paper-summary dt { color: #6b6b6b; }
+.paper-summary dd { margin: 0; }
+.paper-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: var(--s2); }
+.paper-table td, .paper-table th { border-bottom: 1px solid #e3e3e3; padding: 4px 6px 4px 0; text-align: left; vertical-align: top; }
+.paper-table th { font-size: 11px; color: #6b6b6b; text-transform: uppercase; font-weight: 300; }
+.paper-table .r { text-align: right; white-space: nowrap; }
+.paper-table tr.total td { border-top: 1px solid #141414; border-bottom: 0; font-weight: 400; }
+.paper-article h4 .nr { color: #f68712; margin-right: 0.6em; }
+.paper details { margin-top: var(--s4); border-top: 1px solid #e3e3e3; padding-top: var(--s2); }
+.paper summary { cursor: pointer; min-height: 32px; }
+.paper-terms { white-space: pre-wrap; font-size: 11px; line-height: 1.4; font-family: inherit; }
+.paper-sigs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s4); margin-top: var(--s5); border-top: 1px solid #141414; padding-top: var(--s3); }
+.paper-sigs img { max-width: 220px; max-height: 70px; display: block; }
+.sigpad { width: 100%; height: 180px; background: #fff; border: 1px solid var(--fq-rule-color); touch-action: none; cursor: crosshair; display: block; }
+.signhere { max-width: 760px; margin: 0 auto; padding: var(--s4) var(--gutter, 16px) calc(var(--s6, 48px) + env(safe-area-inset-bottom)); display: grid; gap: var(--s4); }
+.signhere-head { display: flex; gap: var(--s3); align-items: flex-start; }
+.signhere-head h1 { font-size: clamp(1.4rem, 1rem + 2vw, 2rem); margin: 4px 0; }
+.signhere-doc { max-height: 60vh; overflow: auto; border: 1px solid var(--fq-rule-color); -webkit-overflow-scrolling: touch; }
+.signhere-typed { font-family: var(--fq-font-display); font-size: 28px; background: #fff; color: #141414; padding: var(--s3) var(--s4); margin: 0; }
+.signhere-btn { min-height: 56px; font-size: 18px; }
+.signhere-done { display: grid; gap: var(--s4); justify-items: center; text-align: center; padding-top: 15vh; }
+.signhere .card .check { margin-bottom: var(--s2); align-items: flex-start; }

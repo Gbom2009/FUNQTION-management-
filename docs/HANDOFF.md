@@ -13,6 +13,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 | Bookings | "Optie" (hold) stage included. **Double booking:** same person, same day only if **no build-up** and **≥ 2 h** between gigs. |
 | Money | Bank probably **Revolut**. Profit split **50/50 but adjustable** (dated rules, fixed % or by lineup). Both have **jobs**, so hours tracking is light. |
 | Sensitive data | The **IBAN** is entered by the user on the device (Settings), never in code or on GitHub. They own a domain, which isn't used yet. |
+| Contracts | Built in local mode (v0.4.0). Quote + contract **per event type** (together / after quote / none). **Softer consumer cancellation scale**. **Automatic countersigning**. Photo/video **opt-out**. Details at the top of `docs/contracts/PLAN.md`. |
 | Terms | Gijs asked for draft general terms: `docs/legal/ALGEMENE-VOORWAARDEN.md` and `src/apps/invoicing/terms.ts`. **Draft, not legally reviewed.** |
 
 ## 2. Still unanswered / to do
@@ -22,7 +23,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **Navigation app:** how it's built is unknown (asked twice). Trips use manual km plus a per-venue memory.
 - **Existing gear list** (for investments/assets) and **real price list** not given. The seeded prices (e.g. €150/h DJ set) are placeholders.
 - Items marked ⚖️ in the plans (9% vs 21% VAT for DJ sets, VAT on cancellation fees, deductions) need an accountant **once they register**.
-- App 4 (Contracts) has a functional plan in `docs/contracts/PLAN.md` (no code yet; its open questions in §11 need Gijs's answers first). Apps 5–8 (gig-day, gear, portal, navigation link) aren't started. No sync server yet.
+- App 4 (Contracts) is built in local mode. Not done: online signing relay, automatic e-mail, the remaining open questions in `docs/contracts/PLAN.md` §11 (rider contents, insurance, legal names, lawyer review). Existing devices keep their stored terms text: App 2 settings shows a button to take over version 2026-12. Apps 5–8 (gig-day, gear, portal, navigation link) aren't started. No sync server yet.
 
 ## 3. Conventions in the code
 
@@ -31,6 +32,8 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **i18n:** `src/core/i18n/nl.ts` is the typed source. `en.ts` must have every key (`tsc` enforces this).
 - Money in **cents**. Dates are local `yyyy-mm-dd`, times `HH:mm` (an end time earlier than the start time means the next day).
 - **Invoice numbers:** gapless, **one series per member** (`F2026-G-0001`, `F2026-C-0001`) because there's no server. Finalised invoices are immutable; corrections are credit notes.
+- **Contract versions and signatures are immutable** (guarded in `repo.ts`). Changes after signing are addenda.
+- `runTaskSync()` returns the in-flight run; tests that trigger it should `await runTaskSync()` in `afterEach` before the next test swaps the database.
 - **Reports are computed, never stored** (`src/apps/money/domain/ledger.ts`).
 - **OCR:** Tesseract assets are copied to `public/ocr` (gitignored) by `scripts/copy-ocr.mjs` (runs before dev/build/test). pdfmake and OCR are lazy-loaded.
 - **Backups v2:** a ZIP with receipt photos, optionally AES-GCM encrypted. v1 JSON still imports.
