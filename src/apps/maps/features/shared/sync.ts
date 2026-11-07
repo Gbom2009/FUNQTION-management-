@@ -60,6 +60,7 @@ async function seedVehicles(settings?: Settings) {
 
 export function startSharedSync(): () => void {
   const subs: { unsubscribe(): void }[] = [];
+  useGigs.setState({ loaded: false });
 
   const gigsAndVenues = liveQuery(async () => ({
     venues: await db.venues.toArray(),
@@ -79,6 +80,7 @@ export function startSharedSync(): () => void {
     const dayOf = new Map(withOverlay("gigDays", days).map((d) => [d.gigId, d]));
     const gigs = withOverlay("gigs", lastGV.gigs.filter(navGig));
     useGigs.setState({
+      loaded: true,
       venues: venues.map((v) => toMapsVenue(v, byVenue.get(v.id))).sort((a, b) => a.name.localeCompare(b.name)),
       gigs: gigs.map((g) => toMapsGig(g, dayOf.get(g.id) ?? (overlay("gigDays", gigDayId(g.id)) as GigDay | undefined))),
     });
@@ -109,5 +111,5 @@ export function startSharedSync(): () => void {
   void db.settings.get("settings").then(seedVehicles);
 
   const off = onFlushed(() => { applyGV(); applyV(); });
-  return () => { subs.forEach((s) => s.unsubscribe()); off(); };
+  return () => { subs.forEach((s) => s.unsubscribe()); off(); useGigs.setState({ loaded: false }); };
 }
