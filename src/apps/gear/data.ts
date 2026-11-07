@@ -88,7 +88,7 @@ export async function importGearCsv(text: string): Promise<{ added: number; skip
     if (cur) {
       ids.set(p.item.code, cur.id);
       const fill: Partial<GearItem> = {};
-      for (const k of ['brand', 'model', 'serial', 'labelType', 'weightKg', 'purchaseDate', 'purchasePrice', 'replacementValue', 'powerW'] as const) {
+      for (const k of ['brand', 'model', 'serial', 'labelType', 'labelPreset', 'weightKg', 'purchaseDate', 'purchasePrice', 'replacementValue', 'powerW'] as const) {
         if (cur[k] == null && p.item[k] != null) (fill as Record<string, unknown>)[k] = p.item[k];
       }
       if (Object.keys(fill).length) { await save<GearItem>('gearItems', { ...cur, ...fill }); updated++; } else skipped++;

@@ -4,6 +4,7 @@
 import readerWasm from 'zxing-wasm/reader/zxing_reader.wasm?url';
 import writerWasm from 'zxing-wasm/writer/zxing_writer.wasm?url';
 import { barsFromSvg, type Bars } from './domain/barcode';
+import { matrixFromSymbol } from './domain/labelArt';
 
 let reader: Promise<typeof import('zxing-wasm/reader')> | null = null;
 let writer: Promise<typeof import('zxing-wasm/writer')> | null = null;
@@ -27,7 +28,8 @@ function getWriter() {
 /** Decode one QR code or Code 128 barcode from a camera frame. */
 export async function decodeFrame(img: ImageData): Promise<string | null> {
   const m = await getReader();
-  const r = await m.readBarcodes(img, { formats: ['QRCode', 'Code128'], tryHarder: true, maxNumberOfSymbols: 1 });
+  // tryInvert: also reads light-on-dark codes (e.g. orange on a black Funqtion label).
+  const r = await m.readBarcodes(img, { formats: ['QRCode', 'Code128'], tryHarder: true, tryInvert: true, maxNumberOfSymbols: 1 });
   return r.find((x) => x.isValid)?.text ?? null;
 }
 
@@ -43,4 +45,12 @@ export async function code128Map(codes: string[]): Promise<Record<string, Bars>>
   const out: Record<string, Bars> = {};
   for (const c of codes) out[c] = await code128(c);
   return out;
+}
+
+/** QR module grid; error correction H leaves room for a logo in the middle. */
+export async function qrMatrix(text: string, withLogo: boolean) {
+  const m = await getWriter();
+  const w = await m.writeBarcode(text, { format: 'QRCode', scale: 1, addQuietZones: false, ecLevel: withLogo ? 'H' : 'M' });
+  if (w.error) throw new Error(w.error);
+  return matrixFromSymbol(w.symbol);
 }

@@ -7,7 +7,8 @@ import { ItemList, ItemPage } from './pages/Items';
 import PackPage from './pages/PackPage';
 import Kits from './pages/Kits';
 import Care from './pages/Care';
-import { GearSettings, Insurance, Labels, More, Rentals, Wishlist } from './pages/More';
+import { GearSettings, Insurance, More, Rentals, Wishlist } from './pages/More';
+import Labels from './pages/Labels';
 import { useGearItems, useIssues } from './data';
 
 export default function GearApp() {
