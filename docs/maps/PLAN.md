@@ -1,7 +1,7 @@
 # Funqtion Maps in the Hub — Merge Plan
 
 > Gijs's decision (Nov 2026): **FQ-maps moves into this repo** and becomes the hub's **Navigatie** app (`/maps`), sharing the database with apps 1–6. Gigs and venues are entered **once**, in the suite. The Instagram handle everywhere is **@funqtionofficial**.
-> Source: [github.com/Gbom2009/FQ-maps](https://github.com/Gbom2009/FQ-maps) (Tauri 2 + React + MapLibre, ~15k lines, 175 files, phases 1–5 done). **Status: steps 1–4 built (v0.8.0)**; step 5 is Gig Day. See "What was built" at the end and `docs/ARCHITECTURE.md` → Navigatie.
+> Source: [github.com/Gbom2009/FQ-maps](https://github.com/Gbom2009/FQ-maps) (Tauri 2 + React + MapLibre, ~15k lines, 175 files, phases 1–5 done). **Status: steps 1–5 built** (Maps v0.8.0, Gig Day v0.9.0). See "What was built" at the end and `docs/ARCHITECTURE.md` → Navigatie.
 
 ## 1. What changes for the user
 

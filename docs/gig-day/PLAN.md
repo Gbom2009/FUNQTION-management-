@@ -1,7 +1,7 @@
 # Funqtion Gig Day — Functional Plan
 
 > App 6 of the Funqtion suite. **FEEL THE MUSIQ.**
-> Status: functional plan, no code yet. Builds on apps 1–5 (Bookings, Quotes & Invoices, Money, Contracts, Gear), all live in this repo in local mode, and on Gijs's own navigation app.
+> Status: **MVP v6.0 built (v0.9.0)**, see "What was built" at the end. Builds on apps 1–5 (Bookings, Quotes & Invoices, Money, Contracts, Gear), all live in this repo in local mode, and on Gijs's own navigation app.
 > **Decisions made (answers from Gijs):**
 > - **Navigation = [FQ-maps](https://github.com/Gbom2009/FQ-maps), moved into this hub** as the **Navigatie** app (`/maps`), sharing the database with apps 1–6. No hand-over links between your own apps: "Route" opens Maps in the hub, and drive time, arrival and km are written straight to the shared database. The merge plan is in [`docs/maps/PLAN.md`](../maps/PLAN.md); §6.1 describes the Gig Day side.
 > - **One source for gigs and venues:** entered once, in the suite (App 1 + Gig Day's venue fields). Maps shows and edits the same records.
@@ -441,3 +441,38 @@ Answered: navigation app (FQ-maps, merged into the hub), sync (no server for now
 6. **Venue data:** OK to store Wi-Fi passwords and access codes on the phones (encrypted in backups)? Venues you play often, to fill in first?
 7. **Vibe and log:** a 1–5 scale, or words ("leeg / halfvol / vol / los")? Anything else to log every gig?
 8. **Multi-gig days:** do you sometimes play two gigs on one day? Then the Today screen needs a "next gig" switch.
+
+## 10. What was built (v0.9.0)
+
+The MVP of §4, in local mode:
+- gig list, Today, Plan, Timeline, Venue, Music, Log, Wrap-up, Booth mode and settings
+- the timeline engine of §1.8
+- task templates with owners
+- "We zijn later" with a prepared WhatsApp
+- overtime from logged requests
+- the wrap-up into apps 1/2/3/5
+- calendar file with alarms
+- plan sharing as a file
+- Route into Maps
+
+**Defaults chosen for the open questions** (change them when you answer):
+1. **Location:** no in-app location; use Find My between you two.
+2. **Drivers:**
+   - the gig owner drives by default; set drivers and an optional pick-up detour per gig in Plan
+   - each driver gets their own leave time
+3. **Reminders:** a standard `.ics` file, which works in Apple and Google Calendar.
+4. **Special moments:**
+   - free text, with time, track, cue and who announces (MC)
+   - without a time, a moment goes right after the first set (one long set: at its start)
+5. **Review link:** the one in Settings (`reviewLink`), used in the "Bedankt + review" template.
+6. **Wi-Fi password and access code:** stored on the venue. They're in backups, and encrypted only when you choose a backup passphrase.
+7. **Vibe:** a 1–5 scale plus an optional word.
+8. **Multi-gig days:** the list shows every gig of today as its own card.
+
+**Not built yet (needs the server or later):**
+- live sync and check-ins
+- Web Push
+- weather
+- decibel indicator
+- PDF log summary
+- setlist history

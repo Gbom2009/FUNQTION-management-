@@ -38,7 +38,7 @@ export interface MergeResult { inserted: number; updated: number; skipped: numbe
 // records with the same value (the same bank line imported on both phones, the
 // same gear code, two pack lists for one gig). IndexedDB would reject the put
 // and abort the whole import, so these are resolved record by record.
-const UNIQUE: Partial<Record<string, string>> = { bankLines: 'hash', vatPeriods: 'key', gearItems: 'code', packLists: 'gigId', gigDays: 'gigId' };
+const UNIQUE: Partial<Record<string, string>> = { bankLines: 'hash', vatPeriods: 'key', gearItems: 'code', packLists: 'gigId', gigDays: 'gigId', taskTemplates: 'key' };
 
 type Row = Base & Record<string, unknown>;
 

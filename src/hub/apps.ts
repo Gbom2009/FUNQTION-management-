@@ -15,7 +15,7 @@ export const APPS: AppEntry[] = [
   { id: 'invoicing', name: 'app.invoicing', desc: 'app.invoicing.desc', path: '/invoicing' },
   { id: 'accounting', name: 'app.accounting', desc: 'app.accounting.desc', path: '/money' },
   { id: 'contracts', name: 'app.contracts', desc: 'app.contracts.desc', path: '/contracts' },
-  { id: 'gigday', name: 'app.gigday', desc: 'app.gigday.desc' },
+  { id: 'gigday', name: 'app.gigday', desc: 'app.gigday.desc', path: '/gigday' },
   { id: 'gear', name: 'app.gear', desc: 'app.gear.desc', path: '/gear' },
   { id: 'portal', name: 'app.portal', desc: 'app.portal.desc' },
   { id: 'navigation', name: 'app.navigation', desc: 'app.navigation.desc', path: '/maps' },

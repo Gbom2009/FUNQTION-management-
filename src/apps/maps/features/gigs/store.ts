@@ -45,6 +45,8 @@ interface GigState {
   venues: Venue[];
   /** Suite gigs (App 1 + Gig Day) as Maps gigs. Created and renamed in Bookings, not here. */
   gigs: Gig[];
+  /** true once the shared database has been read since Maps opened */
+  loaded: boolean;
   /** map pin-picking: the next map tap sets this venue field */
   picking: { venueId: string; field: PinField } | null;
   /** venue whose pins are shown on the map (open in the editor) */
@@ -64,6 +66,7 @@ interface GigState {
 export const useGigs = create<GigState>()((set, get) => ({
   venues: [],
   gigs: [],
+  loaded: false,
   picking: null,
   focusVenueId: null,
   setFocusVenue: (focusVenueId) => set({ focusVenueId }),

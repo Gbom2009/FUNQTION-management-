@@ -91,6 +91,14 @@ export interface Venue extends Base {
   trailerParking?: GeoPin;
   contactName?: string;   // venue contact for load-in (the gig's day contact lives on the gig)
   contactPhone?: string;
+  // Gig Day venue knowledge
+  stageSize?: string;     // "6 × 4 m"
+  powerPoints?: string;
+  wifiName?: string;
+  wifiPassword?: string;  // in encrypted backups only if you choose a passphrase
+  accessCode?: string;
+  houseRules?: string;
+  defaultDoors?: string;  // HH:mm
 }
 
 /** A point picked on the map. */
@@ -169,6 +177,13 @@ export interface MusicWish {
   kind: WishKind;
   text: string;
   url?: string;
+  // Gig Day: special moments become timeline steps; must-plays get ticked.
+  at?: string;        // HH:mm, or empty = after the first set
+  track?: string;     // artist – title
+  cue?: string;       // "na de speech van de vader"
+  mc?: MemberId | 'none';
+  done?: boolean;
+  doneAt?: string;    // ISO
 }
 
 export interface Gig extends Base {
@@ -482,6 +497,7 @@ export interface Settings {
   gearLoadScan: 'group' | 'each';
   gearUnloadScan: 'group' | 'each';
   gearLabelPresets?: LabelPreset[];
+  gigDay?: Partial<GigDayDefaults>; // App 6 timeline defaults (missing keys → DEFAULT_GIGDAY)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1075,11 +1091,29 @@ export interface VenuePhoto extends Base {
   venueId: ID;
   blob: Blob;
   mime: string;
+  gigId?: ID;
+  kind?: 'entrance' | 'parking' | 'power' | 'stage' | 'booth' | 'other';
+  caption?: string;
 }
 
-/** Per-gig day plan. Maps fills the drive part; Gig Day (app 6) adds the timeline. */
+export type GigDayStatus = 'draft' | 'planned' | 'live' | 'wrapping_up' | 'closed';
+export type GigDaySetup = 'standard' | 'dj_only';
+
+/** Per-gig day plan. Maps fills the drive part; Gig Day (app 6) the rest. */
 export interface GigDay extends Base {
   gigId: ID;
+  status?: GigDayStatus;
+  setup?: GigDaySetup;
+  doorsAt?: string;         // HH:mm
+  curfew?: string;          // HH:mm
+  noiseLimitDb?: number;
+  drivers?: MemberId[];     // who drives (each gets a leave time)
+  pickup?: { by: MemberId; minutes: number; note?: string }; // detour to collect gear at the other's home
+  travelByMember?: Partial<Record<MemberId, number>>;       // minutes, estimate or manual
+  plannedAt?: string;
+  liveAt?: string;
+  closedAt?: string;
+  wrapUp?: Record<string, string>;  // action → ISO when done
   setupBufferMin?: number;
   trafficMarginPct?: number;
   travelMinutes?: number;   // drive time without margin
@@ -1089,3 +1123,103 @@ export interface GigDay extends Base {
 
 /** GPS track of a driven trip (id = trip id). Large: not in backups. */
 export interface TrackRecord { id: ID; points: [number, number][] }
+
+// ---- app 6: Gig Day ---------------------------------------------------------
+
+export const STEP_KINDS = [
+  'leave_home', 'pickup', 'arrive', 'setup', 'soundcheck', 'doors', 'set_start', 'set_end', 'moment',
+  'curfew', 'breakdown', 'leave_venue', 'home', 'custom',
+] as const;
+export type StepKind = (typeof STEP_KINDS)[number];
+
+export interface TimelineStep extends Base {
+  gigId: ID;
+  kind: StepKind;
+  label: string;
+  plannedAt: string;        // ISO
+  actualAt?: string;        // ISO, set when done
+  memberId?: MemberId;      // per-person steps (leave home, pickup)
+  locked?: boolean;         // set by hand: regeneration keeps it
+  sourceRef?: string;       // setSlot id / music wish id
+}
+
+export const DAY_PHASES = ['prep', 'departure', 'setup', 'playing', 'breakdown', 'wrapup'] as const;
+export type DayPhase = (typeof DAY_PHASES)[number];
+
+export interface DayTask extends Base {
+  gigId: ID;
+  phase: DayPhase;
+  title: string;
+  owner: MemberId | 'both';
+  done?: boolean;
+  doneAt?: string;
+  doneBy?: MemberId;
+  templateKey?: string;
+  sort: number;
+}
+
+export interface TaskTemplateItem { phase: DayPhase; title: string; owner: MemberId | 'both'; laserOnly?: boolean; outdoorOnly?: boolean }
+export interface TaskTemplate extends Base {
+  key: string;
+  name: string;
+  setup: GigDaySetup | 'any';
+  eventTypes: EventType[];  // empty = all
+  items: TaskTemplateItem[];
+  active: boolean;
+}
+
+export const LOG_TYPES = [
+  'leave', 'arrive', 'setup_start', 'soundcheck_done', 'doors', 'set_start', 'set_end', 'overtime_request',
+  'moment_done', 'issue', 'damage', 'complaint', 'compliment', 'vibe', 'note', 'late', 'left_venue', 'home',
+] as const;
+export type LogType = (typeof LOG_TYPES)[number];
+
+/** Append-only: two phones logging at once never conflict. */
+export interface GigLog extends Base {
+  gigId: ID;
+  at: string;               // ISO
+  by: MemberId;
+  type: LogType;
+  text?: string;
+  minutes?: number;         // late / overtime
+  requestedBy?: string;     // overtime: who asked
+  vibe?: number;            // 1–5
+  issueId?: ID;             // damage → App 5 issue
+  stepId?: ID;
+}
+
+export const VENUE_NOTE_KINDS = ['load_in', 'parking', 'power', 'stage', 'wifi', 'access', 'noise', 'contact', 'general'] as const;
+export type VenueNoteKind = (typeof VENUE_NOTE_KINDS)[number];
+export interface VenueNote extends Base {
+  venueId: ID;
+  gigId?: ID;
+  kind: VenueNoteKind;
+  text: string;
+  stale?: boolean;          // "klopt niet meer"
+}
+
+/** Defaults for the generated timeline (Gig Day → Instellingen). */
+export interface GigDayDefaults {
+  doorsBeforeFirstSet: number;
+  soundcheckBeforeDoors: Record<GigDaySetup, number>;
+  setupMinutes: Record<GigDaySetup, number>;
+  breakdownMinutes: Record<GigDaySetup, number>;
+  arriveBeforeSetup: number;
+  leaveBuffer: number;
+  avgSpeedKmh: number;
+  avgSpeedTrailerKmh: number;
+  wrapUpAt: string;         // HH:mm next morning
+  dayBeforeAt: string;      // HH:mm
+}
+export const DEFAULT_GIGDAY: GigDayDefaults = {
+  doorsBeforeFirstSet: 30,
+  soundcheckBeforeDoors: { standard: 30, dj_only: 15 },
+  setupMinutes: { standard: 90, dj_only: 30 },
+  breakdownMinutes: { standard: 60, dj_only: 20 },
+  arriveBeforeSetup: 15,
+  leaveBuffer: 15,
+  avgSpeedKmh: 60,
+  avgSpeedTrailerKmh: 55,
+  wrapUpAt: '10:00',
+  dayBeforeAt: '18:00',
+};
