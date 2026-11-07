@@ -9,7 +9,7 @@ import { blankGig, createGig } from '../bookings/data';
 import { desiredTasks } from '../bookings/domain/reminders';
 import { runTaskSync } from '../bookings/domain/taskSync';
 import {
-  allConflicts, finishLoading, finishReturn, getOrCreatePackList, importGearCsv, regenerate, reportIssue, resolveIssue, saveRental, scanInto, returnRental,
+  allConflicts, finishLoading, finishReturn, getOrCreatePackList, importGearCsv, regenerate, reportIssue, resolveIssue, saveRental, scanInto, returnRental, setParent, splitCounted,
 } from './data';
 
 // End-to-end through the database with the real (temporary) gear list.
@@ -25,7 +25,16 @@ describe('gear flow', () => {
     const { db } = await import('../../core/db');
     const r = await importGearCsv(csv);
     expect(r.added).toBeGreaterThan(20);
-    expect((await importGearCsv(csv)).added).toBe(0); // idempotent by code
+    expect(await importGearCsv(csv)).toMatchObject({ added: 0, updated: 0 }); // idempotent by code
+    // An older import without the flight case: re-importing adds the case and puts the controller in it.
+    const ctrl = (await db.gearItems.where('code').equals('FQ-0001').first())!;
+    await save('gearItems', { ...ctrl, parentId: undefined, brand: undefined, labelType: undefined });
+    await save('gearItems', { ...(await db.gearItems.where('code').equals('FQ-0009').first())!, deletedAt: new Date().toISOString(), code: 'FQ-9009' });
+    const again = await importGearCsv(csv);
+    expect(again.added).toBe(1);
+    const ctrl2 = (await db.gearItems.get(ctrl.id))!;
+    expect(ctrl2.brand).toBe('Pioneer DJ');
+    expect((await db.gearItems.get(ctrl2.parentId!))!.code).toBe('FQ-0009');
     const standard = (await db.gearKits.toArray()).find((k) => k.role === 'standard')!;
     expect(standard.lines.length).toBeGreaterThanOrEqual(8);
     const bag = (await db.gearItems.where('code').equals('FQ-0103').first())!;
@@ -95,5 +104,34 @@ describe('gear flow', () => {
     expect((await db.gearItems.get(sub.id))!.status).toBe('lent');
     await returnRental(lend);
     expect((await db.gearItems.get(sub.id))!.status).toBe('available');
+  });
+
+  it('loads by case (group) and unloads piece by piece (each); splits counted cables into labelled items', async () => {
+    const { db } = await import('../../core/db');
+    await importGearCsv(csv);
+    const byCode = async (c: string) => (await db.gearItems.where('code').equals(c).first())!;
+    const flight = await byCode('FQ-0009');
+    expect((await db.gearItems.where('parentId').equals(flight.id).toArray()).map((i) => i.code).sort()).toEqual(['FQ-0001', 'FQ-0014']);
+    expect(await setParent(flight, (await byCode('FQ-0001')).id)).toBe('cycle');
+    const gig = await createGig(blankGig('gijs', { title: 'Feest', eventType: 'private_party', date: inDays(15), stage: 'confirmed' }));
+    let list = await getOrCreatePackList(gig.id);
+    const ids = [flight.id, (await byCode('FQ-0001')).id, (await byCode('FQ-0014')).id];
+    list = { ...list, lines: list.lines.filter((l) => ids.includes(l.itemId)) };
+    list = (await scanInto(list, 'FQ-0009', 'out', true)).list;
+    expect(list.lines.every((l) => l.out === 1)).toBe(true);
+    list = await finishLoading(list);
+    list = (await scanInto(list, 'FQ-0009', 'back', false)).list;
+    expect(list.lines.filter((l) => l.back === 1)).toHaveLength(1);
+    list = (await scanInto(list, 'FQ-0001', 'back', false)).list;
+    list = (await scanInto(list, 'FQ-0014', 'back', false)).list;
+    expect(list.lines.every((l) => l.back === 1)).toBe(true);
+
+    const xlr = await byCode('FQ-0040');
+    const made = await splitCounted(xlr);
+    expect(made).toHaveLength(xlr.quantity);
+    expect(new Set(made.map((m) => m.code)).size).toBe(xlr.quantity);
+    expect(made.every((m) => m.kind === 'unique' && m.quantity === 1 && m.parentId === xlr.parentId)).toBe(true);
+    const standard = (await db.gearKits.toArray()).find((k) => k.role === 'standard')!;
+    expect(made.every((m) => standard.lines.some((l) => l.itemId === m.id))).toBe(true);
   });
 });

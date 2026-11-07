@@ -470,6 +470,9 @@ export interface Settings {
   gearSafetyMonthsPower: number;   // extension cables, power strips, distribution
   gearInsurer?: string;            // empty = not insured
   gearInsuredSum?: number;         // cents
+  /** group = scanning a case ticks off everything in it; each = every item must be scanned itself. */
+  gearLoadScan: 'group' | 'each';
+  gearUnloadScan: 'group' | 'each';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -527,6 +530,8 @@ export const DEFAULT_SETTINGS: Settings = {
   gearSafetyTests: false,
   gearSafetyMonths: 12,
   gearSafetyMonthsPower: 6,
+  gearLoadScan: 'group',
+  gearUnloadScan: 'each',
 };
 
 // ---- App 3: Money & Accounting ------------------------------------------------
@@ -861,7 +866,7 @@ export interface GearItem extends Base {
   owner: GearOwner;
   homeLocationId?: ID;
   locationId?: ID;           // where it is now
-  parentId?: ID;             // container it normally lives in
+  parentId?: ID;             // container it normally lives in (containers can sit in containers: a tree)
   status: GearStatus;
   transport: GearTransport;
   weightKg?: number;
@@ -878,8 +883,12 @@ export interface GearItem extends Base {
   usageGigs: number;
   firmware?: string;
   laserClass?: string;
+  labelType?: LabelType;     // preferred label for printing
   notes?: string;
 }
+
+/** QR large for cases and big gear, QR small, or a Code 128 barcode strip (wraps around cables). */
+export type LabelType = 'qr_large' | 'qr_small' | 'barcode';
 
 export interface GearPhoto extends Base {
   itemId: ID;
@@ -907,6 +916,7 @@ export interface PackLine {
   out: number;               // checked out
   back: number;              // checked back in
   missing?: 'later' | 'venue' | 'lost' | 'broken';
+  skip?: boolean;            // on the list, but not taken this time
 }
 
 export interface PackList extends Base {

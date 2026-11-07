@@ -7,7 +7,7 @@ import {
   type KitRole, type MaintenanceLog, type MaintenancePlan, type MemberId, type PackLine, type PackList, type SafetyTest, type Settings, type WishItem,
 } from '../../core/types';
 import { runTaskSync } from '../bookings/domain/taskSync';
-import { applyScan, defaultSetup, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, type ScanOutcome } from './domain/gear';
+import { applyScan, defaultSetup, descendants, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, wouldCycle, type ScanOutcome } from './domain/gear';
 
 const EMPTY: never[] = [];
 export const useGearItems = () => alive(useLiveQuery(() => db.gearItems.toArray(), []) ?? EMPTY) as GearItem[];
@@ -69,40 +69,59 @@ export async function locationByKey(key: string) {
 // ---------------------------------------------------------------------------
 // Import / export (docs/gear-inventory/gear-list.csv format)
 
-export async function importGearCsv(text: string): Promise<{ added: number; skipped: number }> {
+/**
+ * Import the gear list. New codes are added. Existing items are never overwritten:
+ * only empty fields are filled in (brand, serial, the case it sits in, label…), so
+ * re-importing an updated list completes what you already have without undoing edits.
+ */
+export async function importGearCsv(text: string): Promise<{ added: number; skipped: number; updated: number }> {
   await ensureGearSeed();
   const parsed = itemsFromCsv(parseCsv(text));
-  const existing = new Map((await db.gearItems.toArray()).map((i) => [i.code, i]));
+  const existing = new Map(alive(await db.gearItems.toArray()).map((i) => [i.code, i]));
   const locs = await db.gearLocations.toArray();
   const loc = (k?: string) => locs.find((l) => l.key === k)?.id;
   const ids = new Map<string, string>();
-  let added = 0; let skipped = 0;
+  const fresh = new Set<string>();
+  let added = 0; let skipped = 0; let updated = 0;
   for (const p of parsed) {
     const cur = existing.get(p.item.code);
-    if (cur) { ids.set(p.item.code, cur.id); skipped++; continue; }
+    if (cur) {
+      ids.set(p.item.code, cur.id);
+      const fill: Partial<GearItem> = {};
+      for (const k of ['brand', 'model', 'serial', 'labelType', 'weightKg', 'purchaseDate', 'purchasePrice', 'replacementValue', 'powerW'] as const) {
+        if (cur[k] == null && p.item[k] != null) (fill as Record<string, unknown>)[k] = p.item[k];
+      }
+      if (Object.keys(fill).length) { await save<GearItem>('gearItems', { ...cur, ...fill }); updated++; } else skipped++;
+      continue;
+    }
     const home = loc(p.homeKey);
     const it = await save<GearItem>('gearItems', { ...p.item, homeLocationId: home, locationId: home });
     ids.set(it.code, it.id);
+    fresh.add(it.code);
     added++;
   }
+  const all = alive(await db.gearItems.toArray());
   for (const p of parsed) {
-    if (!p.containerCode || existing.has(p.item.code)) continue;
-    const it = await db.gearItems.get(ids.get(p.item.code)!);
+    if (!p.containerCode) continue;
+    const it = all.find((x) => x.id === ids.get(p.item.code));
     const parent = ids.get(p.containerCode) ?? existing.get(p.containerCode)?.id;
-    if (it && parent) await save<GearItem>('gearItems', { ...it, parentId: parent });
+    if (!it || !parent || it.parentId || wouldCycle(it.id, parent, all)) continue; // never move something you already placed
+    await save<GearItem>('gearItems', { ...it, parentId: parent });
+    if (!fresh.has(it.code)) updated++;
   }
   const kits = alive(await db.gearKits.toArray());
   for (const role of new Set(parsed.flatMap((p) => p.kits))) {
     let kit = kits.find((k) => k.role === role);
     if (!kit) kit = await save<GearKit>('gearKits', { role, name: KIT_NAMES[role], lines: [] });
     const lines = [...kit.lines];
-    for (const p of parsed.filter((x) => x.kits.includes(role))) {
+    // Only new items join kits: if you took something out of a kit, a re-import doesn't put it back.
+    for (const p of parsed.filter((x) => x.kits.includes(role) && fresh.has(x.item.code))) {
       const id = ids.get(p.item.code)!;
       if (!lines.some((l) => l.itemId === id)) lines.push({ itemId: id, qty: p.item.kind === 'counted' ? p.item.quantity : 1 });
     }
-    await save<GearKit>('gearKits', { ...kit, lines });
+    if (lines.length !== kit.lines.length) await save<GearKit>('gearKits', { ...kit, lines });
   }
-  return { added, skipped };
+  return { added, skipped, updated };
 }
 
 export async function exportGearCsv(): Promise<string> {
@@ -198,16 +217,60 @@ export async function addLine(list: PackList, itemId: string, qty = 1, reason = 
   return save<PackList>('packLists', { ...list, lines: [...list.lines, { id: uid(), itemId, qty, source: 'manual', reason, out: 0, back: 0 }] });
 }
 
-export async function scanInto(list: PackList, raw: string, phase: 'out' | 'back'): Promise<{ list: PackList; item?: GearItem; outcome: ScanOutcome | { kind: 'unknown' } }> {
+/**
+ * Apply a scan. group = a case ticks off everything in it (loading); each = only
+ * the scanned item (unloading: every piece checked). Loading a case in group mode
+ * also puts anything that lives in it on the list, so the list follows the tree.
+ */
+export async function scanInto(list: PackList, raw: string, phase: 'out' | 'back', group = true): Promise<{ list: PackList; item?: GearItem; outcome: ScanOutcome | { kind: 'unknown' } }> {
   const item = await findByCode(raw);
   if (!item) return { list, outcome: { kind: 'unknown' } };
-  const contents = alive(await db.gearItems.where('parentId').equals(item.id).toArray()).map((i) => i.id);
-  const r = applyScan(list.lines, item, contents, phase);
+  const all = alive(await db.gearItems.toArray());
+  const contents = descendants(item.id, all);
+  let lines = list.lines;
+  if (group && phase === 'out' && lines.some((l) => l.itemId === item.id)) {
+    const byId = new Map(all.map((i) => [i.id, i]));
+    for (const id of contents) {
+      const it = byId.get(id);
+      if (!it || it.status === 'disposed' || lines.some((l) => l.itemId === id)) continue;
+      lines = [...lines, { id: uid(), itemId: id, qty: it.kind === 'counted' ? it.quantity : 1, source: 'kit', reason: `in ${byId.get(it.parentId ?? '')?.name ?? ''}`.trim(), out: 0, back: 0 }];
+    }
+  }
+  const r = applyScan(lines, item, contents, phase, group);
   if (r.outcome.kind === 'ticked') {
     const status = phase === 'out' && list.status !== 'out' ? 'loading' : list.status;
     list = await save<PackList>('packLists', { ...list, lines: r.lines, status });
   }
   return { list, item, outcome: r.outcome };
+}
+
+/** Put an item in a case (or take it out). Refuses loops such as a case inside itself. */
+export async function setParent(item: GearItem, parentId: string | undefined): Promise<GearItem | 'cycle'> {
+  if (wouldCycle(item.id, parentId, alive(await db.gearItems.toArray()))) return 'cycle';
+  return save<GearItem>('gearItems', { ...(await db.gearItems.get(item.id))!, parentId });
+}
+
+/**
+ * A counted item ("XLR 10 m × 4") becomes separate items, each with its own code and
+ * label, so every cable can be scanned. Kits keep including all of them.
+ */
+export async function splitCounted(item: GearItem): Promise<GearItem[]> {
+  if (item.kind !== 'counted' || item.quantity < 2) return [item];
+  const n = item.quantity;
+  const each = (v?: number) => (v != null ? Math.round(v / n) : undefined);
+  const first = await save<GearItem>('gearItems', { ...item, kind: 'unique', quantity: 1, name: `${item.name} 1`, purchasePrice: each(item.purchasePrice), replacementValue: each(item.replacementValue), weightKg: item.weightKg });
+  const made = [first];
+  for (let i = 2; i <= n; i++) {
+    const { id: _id, code: _c, createdAt: _a, createdBy: _b, updatedAt: _u, updatedBy: _v, ...rest } = first;
+    made.push(await saveItem({ ...rest, name: `${item.name} ${i}`, serial: undefined }));
+  }
+  for (const k of alive(await db.gearKits.toArray())) {
+    const line = k.lines.find((l) => l.itemId === item.id);
+    if (!line) continue;
+    const take = made.slice(0, Math.max(1, Math.min(n, line.qty)));
+    await save<GearKit>('gearKits', { ...k, lines: [...k.lines.filter((l) => l.itemId !== item.id), ...take.map((m) => ({ itemId: m.id, qty: 1 }))] });
+  }
+  return made;
 }
 
 export async function finishLoading(list: PackList): Promise<PackList> {

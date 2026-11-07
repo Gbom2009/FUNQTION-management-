@@ -32,7 +32,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2,wasm}'],
         // OCR engine + language data (~14 MB) are cached on first use, not at install.
         globIgnores: ['ocr/**'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,

@@ -8,13 +8,13 @@ import { Empty, Field, Modal, Section, useToast } from '../../../core/ui';
 import { centsFromInput, euro, fmtDate, fmtDateTime, inputFromCents } from '../../../core/format';
 import { alive, softDelete } from '../../../core/repo';
 import { todayStr } from '../../../core/dates';
-import { GEAR_CATEGORIES, type GearCategory, type GearItem, type GearOwner, type GearStatus } from '../../../core/types';
+import { GEAR_CATEGORIES, type GearCategory, type GearItem, type GearOwner, type GearStatus, type LabelType } from '../../../core/types';
 import {
-  addPhoto, addSafetyTest, blankItem, disposeItem, logMaintenance, markFound, moveItem, reportIssue, saveItem, useGearItems, useGearLocations, useIssues, useLogs,
+  addPhoto, addSafetyTest, blankItem, disposeItem, logMaintenance, markFound, moveItem, reportIssue, saveItem, setParent, splitCounted, useGearItems, useGearLocations, useIssues, useLogs,
   useMovements, usePhotoMeta, useSafetyTests, type ItemDraft,
 } from '../data';
 import { OwnerChip, StatusPill, Thumb } from '../components';
-import { completeness } from '../domain/gear';
+import { ancestry, completeness, defaultLabelType, descendants } from '../domain/gear';
 
 const OWNERS: GearOwner[] = ['gijs', 'coen', 'shared', 'unknown'];
 
@@ -27,6 +27,7 @@ export function ItemList() {
   const [cat, setCat] = useState<GearCategory | ''>('');
   const [owner, setOwner] = useState<GearOwner | ''>('');
   const [status, setStatus] = useState<GearStatus | 'active'>('active');
+  const [treeView, setTreeView] = useState(false);
   const needle = q.trim().toLowerCase();
   const rows = items
     .filter((i) => (status === 'active' ? i.status !== 'disposed' : i.status === status))
@@ -34,6 +35,18 @@ export function ItemList() {
     .filter((i) => !owner || i.owner === owner)
     .filter((i) => !needle || [i.name, i.code, i.brand, i.model, i.serial].some((x) => x?.toLowerCase().includes(needle)))
     .sort((a, b) => a.code.localeCompare(b.code));
+  // Tree view: top-level items first, each followed by what's inside (indented).
+  const depthOf = new Map<string, number>();
+  let shown = rows;
+  if (treeView) {
+    const ids = new Set(rows.map((r) => r.id));
+    const kids = new Map<string, GearItem[]>();
+    for (const r of rows) if (r.parentId && ids.has(r.parentId)) kids.set(r.parentId, [...(kids.get(r.parentId) ?? []), r]);
+    shown = [];
+    const walk = (it: GearItem, d: number) => { if (depthOf.has(it.id)) return; depthOf.set(it.id, d); shown.push(it); for (const k of kids.get(it.id) ?? []) walk(k, d + 1); };
+    for (const r of rows) if (!r.parentId || !ids.has(r.parentId)) walk(r, 0);
+    for (const r of rows) if (!depthOf.has(r.id)) walk(r, 0);
+  }
   return (
     <div>
       <div className="page-head"><h1>{t('g.items')}</h1><Link className="btn primary" to="/gear/items/new">+ {t('g.newItem')}</Link></div>
@@ -45,15 +58,18 @@ export function ItemList() {
           <select className="input" style={{ width: 'auto' }} value={status} onChange={(e) => setStatus(e.target.value as GearStatus | 'active')} aria-label={t('g.statusLabel')}>
             <option value="active">{t('g.allActive')}</option>{(['available', 'out', 'out_of_service', 'in_repair', 'lent', 'missing', 'disposed'] as GearStatus[]).map((s) => <option key={s} value={s}>{t(`g.status.${s}`)}</option>)}
           </select>
+          <button className="chip" aria-pressed={treeView} onClick={() => setTreeView(!treeView)}>{t('g.treeView')}</button>
         </div>
       </div>
       {rows.length === 0 ? <Empty>{t('g.noItems')}</Empty> : (
         <div className="list">
-          {rows.map((i) => {
+          {shown.map((i) => {
             const c = completeness(i, photos);
             const gaps = Object.values(c).filter((x) => !x).length;
+            const depth = depthOf.get(i.id) ?? 0;
             return (
-              <Link key={i.id} to={`/gear/items/${i.id}`} className="list-item">
+              <Link key={i.id} to={`/gear/items/${i.id}`} className="list-item" style={depth ? { paddingLeft: `calc(var(--s4) + ${depth * 24}px)` } : undefined}>
+                {depth > 0 && <span className="tree-mark" aria-hidden="true">└</span>}
                 <Thumb itemId={i.id} />
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="strong">{i.name}{i.kind === 'counted' ? ` × ${i.quantity}` : ''}</div>
@@ -93,7 +109,8 @@ export function ItemPage() {
   }, [stored, dirty, isNew, locs.length]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d) return null;
   const set = (p: Partial<ItemDraft>) => { setD({ ...d, ...p }); setDirty(true); };
-  const containers = items.filter((i) => i.kind === 'container' && i.id !== d.id);
+  const inside = d.id ? new Set([d.id, ...descendants(d.id, items)]) : new Set<string>();
+  const containers = items.filter((i) => i.kind === 'container' && !inside.has(i.id) && i.status !== 'disposed');
   async function persist() {
     if (!d!.name.trim()) return;
     const s = await saveItem(d!);
@@ -136,6 +153,10 @@ export function ItemPage() {
               </div>
               <p className="tiny muted">{t(`g.kindHint.${d.kind}`)}</p>
               <div className="grid3">{txt('brand', t('g.brand'))}{txt('model', t('g.model'))}{txt('serial', t('g.serial'))}</div>
+              {d.kind === 'counted' && stored && stored.quantity > 1 && (
+                <div className="banner info"><span>✂</span><div className="txt small">{t('g.splitHint', { n: stored.quantity })}
+                  <div style={{ marginTop: 'var(--s2)' }}><button className="btn small" onClick={async () => { if (window.confirm(t('g.splitConfirm', { n: stored.quantity }))) { const made = await splitCounted(stored); toast(t('g.splitDone', { n: made.length })); setDirty(false); } }}>{t('g.split')}</button></div></div></div>
+              )}
               <div className="grid3">
                 {d.kind === 'counted' && numF('quantity', t('g.quantity'))}
                 <Field label={t('g.owner')}><select value={d.owner} onChange={(e) => set({ owner: e.target.value as GearOwner })}>{OWNERS.map((o) => <option key={o} value={o}>{t(`g.owner.${o}`)}</option>)}</select></Field>
@@ -146,6 +167,9 @@ export function ItemPage() {
                 <Field label={t('g.container')}><select value={d.parentId ?? ''} onChange={(e) => set({ parentId: e.target.value || undefined })}><option value="">—</option>{containers.map((c) => <option key={c.id} value={c.id}>{c.code} {c.name}</option>)}</select></Field>
                 {numF('weightKg', t('g.weight'))}
               </div>
+              <Field label={t('g.labelType')}><select value={d.labelType ?? ''} onChange={(e) => set({ labelType: (e.target.value || undefined) as LabelType | undefined })}>
+                <option value="">{t('g.labelAuto', { type: t(`g.label.${defaultLabelType(d)}`) })}</option>{(['qr_large', 'qr_small', 'barcode'] as const).map((x) => <option key={x} value={x}>{t(`g.label.${x}`)}</option>)}
+              </select></Field>
             </div>
           </Section>
           <Section title={t('g.valueSection')}>
@@ -172,6 +196,7 @@ export function ItemPage() {
           </Section>
         </div>
         <div>
+          {!isNew && stored && <TreeBox item={stored} items={items} />}
           {!isNew && stored && <ItemSide item={stored} onSafety={() => setDialog('safety')} safetyOn={settings.gearSafetyTests} />}
         </div>
       </div>
@@ -184,6 +209,44 @@ export function ItemPage() {
       {dialog === 'issue' && stored && <IssueDialog item={stored} onClose={() => setDialog(null)} />}
       {dialog === 'safety' && stored && <SafetyDialog item={stored} onClose={() => setDialog(null)} />}
     </div>
+  );
+}
+
+/** Where the item sits in the tree, and (for cases) what's inside. */
+function TreeBox({ item, items }: { item: GearItem; items: GearItem[] }) {
+  const { t } = useI18n();
+  const toast = useToast();
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const path = ancestry(item.id, items).slice(0, -1).map((id) => byId.get(id)).filter(Boolean) as GearItem[];
+  const kids = items.filter((i) => i.parentId === item.id);
+  const all = descendants(item.id, items);
+  const blocked = new Set([item.id, ...all, ...ancestry(item.id, items)]);
+  if (item.kind !== 'container' && !path.length) return null;
+  return (
+    <Section title={item.kind === 'container' ? t('g.contents', { n: all.length }) : t('g.inCase')}>
+      {path.length > 0 && <p className="small">{t('g.inPath')}: {path.map((p, i) => <span key={p.id}>{i > 0 && ' › '}<Link to={`/gear/items/${p.id}`}>{p.code} {p.name}</Link></span>)}</p>}
+      {item.kind === 'container' && (
+        <>
+          <div className="list">
+            {kids.map((k) => (
+              <div key={k.id} className="list-item">
+                <Link className="grow" to={`/gear/items/${k.id}`}><span className="mono tiny">{k.code}</span> {k.name}{k.kind === 'container' ? ` (${descendants(k.id, items).length})` : ''}</Link>
+                <button className="btn icon small ghost" aria-label={t('g.takeOut')} title={t('g.takeOut')} onClick={() => setParent(k, undefined)}>✕</button>
+              </div>
+            ))}
+            {!kids.length && <p className="small muted">{t('g.emptyCase')}</p>}
+          </div>
+          <select className="input" style={{ marginTop: 'var(--s2)' }} value="" aria-label={t('g.putIn')} onChange={async (e) => {
+            const it = byId.get(e.target.value);
+            if (it && (await setParent(it, item.id)) === 'cycle') toast(t('g.cycle'));
+          }}>
+            <option value="">+ {t('g.putIn')}</option>
+            {items.filter((i) => !blocked.has(i.id) && i.status !== 'disposed').sort((a, b) => a.name.localeCompare(b.name)).map((i) => <option key={i.id} value={i.id}>{i.code} {i.name}{i.parentId ? ` (${byId.get(i.parentId)?.name ?? ''})` : ''}</option>)}
+          </select>
+          <p className="tiny muted">{t('g.treeHint')}</p>
+        </>
+      )}
+    </Section>
   );
 }
 

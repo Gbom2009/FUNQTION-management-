@@ -21,16 +21,49 @@ export function feedback(ok: boolean) {
 }
 
 // ---------------------------------------------------------------------------
-// QR scanner: BarcodeDetector where the browser has it, jsQR elsewhere (iPhone Safari).
+// Scanner: QR codes and Code 128 barcodes. The browser's BarcodeDetector where it
+// can read both (Android Chrome), zxing-wasm elsewhere (iPhone Safari, the exe).
+// "Handscanner" mode hides the camera and keeps the code field focused: a USB or
+// Bluetooth barcode scanner types the code and presses Enter.
 
 type Detector = { detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]> };
+type DetectorCtor = { new (o: { formats: string[] }): Detector; getSupportedFormats?: () => Promise<string[]> };
+
+function useHandheld() {
+  const [on, setOn] = useState(() => { try { return localStorage.getItem('fq-handheld') === '1'; } catch { return false; } });
+  const set = (v: boolean) => { setOn(v); try { localStorage.setItem('fq-handheld', v ? '1' : '0'); } catch { /* private mode */ } };
+  return [on, set] as const;
+}
 
 export function Scanner({ onCode, compact }: { onCode: (code: string) => void; compact?: boolean }) {
+  const { t } = useI18n();
+  const [handheld, setHandheld] = useHandheld();
+  const [typed, setTyped] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  const cb = useRef(onCode);
+  cb.current = onCode;
+  const submit = () => { if (typed.trim()) { cb.current(normaliseCode(typed) ?? typed.trim()); setTyped(''); } };
+  useEffect(() => { if (handheld) input.current?.focus(); }, [handheld]);
+  return (
+    <div className={`scanner${compact ? ' compact' : ''}`}>
+      {!handheld && <Camera onCode={(c) => cb.current(c)} />}
+      <div className="row scanner-bar">
+        <form className="row grow" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <input ref={input} className="input grow" placeholder={handheld ? t('g.scan.handheldHint') : t('g.scan.type')} value={typed} onChange={(e) => setTyped(e.target.value)}
+            onBlur={() => { if (handheld) window.setTimeout(() => input.current?.focus(), 150); }} aria-label={t('g.scan.type')} autoComplete="off" autoCapitalize="characters" />
+          <button className="btn">OK</button>
+        </form>
+        <button className="btn ghost" aria-pressed={handheld} onClick={() => setHandheld(!handheld)}>{t('g.scan.handheld')}</button>
+      </div>
+    </div>
+  );
+}
+
+function Camera({ onCode }: { onCode: (code: string) => void }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [torch, setTorch] = useState<boolean | null>(null);
-  const [typed, setTyped] = useState('');
   const last = useRef<{ code: string; at: number }>({ code: '', at: 0 });
   const cb = useRef(onCode);
   cb.current = onCode;
@@ -40,10 +73,11 @@ export function Scanner({ onCode, compact }: { onCode: (code: string) => void; c
     let stream: MediaStream | null = null;
     let timer = 0;
     let stopped = false;
+    let busy = false;
     let lock: { release: () => Promise<void> } | null = null;
     const canvas = document.createElement('canvas');
     let detector: Detector | null = null;
-    let jsqr: typeof import('jsqr').default | null = null;
+    let decode: ((img: ImageData) => Promise<string | null>) | null = null;
     const emit = (raw: string) => {
       const code = normaliseCode(raw) ?? raw;
       const now = Date.now();
@@ -61,28 +95,29 @@ export function Scanner({ onCode, compact }: { onCode: (code: string) => void; c
         track.current = stream.getVideoTracks()[0];
         const caps = (track.current.getCapabilities?.() ?? {}) as { torch?: boolean };
         setTorch(caps.torch ? false : null);
-        const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
-        if (BD) detector = new BD({ formats: ['qr_code'] });
-        else jsqr = (await import('jsqr')).default;
+        const BD = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
+        const formats = BD ? await BD.getSupportedFormats?.().catch(() => []) ?? [] : [];
+        if (BD && formats.includes('qr_code') && formats.includes('code_128')) detector = new BD({ formats: ['qr_code', 'code_128'] });
+        else decode = (await import('./zxing')).decodeFrame;
         try { lock = await (navigator as unknown as { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request('screen') ?? null; } catch { /* not allowed */ }
         const tick = async () => {
-          if (stopped || !v.videoWidth) return;
+          if (stopped || busy || !v.videoWidth) return;
+          busy = true;
           try {
             if (detector) {
               const r = await detector.detect(v);
               if (r[0]?.rawValue) emit(r[0].rawValue);
-            } else if (jsqr) {
-              const scale = Math.min(1, 720 / v.videoWidth);
+            } else if (decode) {
+              const scale = Math.min(1, 960 / v.videoWidth);
               canvas.width = Math.round(v.videoWidth * scale); canvas.height = Math.round(v.videoHeight * scale);
               const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
               ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-              const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              const r = jsqr(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
-              if (r?.data) emit(r.data);
+              const text = await decode(ctx.getImageData(0, 0, canvas.width, canvas.height));
+              if (text) emit(text);
             }
-          } catch { /* frame not ready */ }
+          } catch { /* frame not ready */ } finally { busy = false; }
         };
-        timer = window.setInterval(tick, 180);
+        timer = window.setInterval(tick, 200);
       } catch (e) {
         setError((e as Error).name === 'NotAllowedError' ? t('g.scan.denied') : t('g.scan.noCamera'));
       }
@@ -100,17 +135,12 @@ export function Scanner({ onCode, compact }: { onCode: (code: string) => void; c
     try { await track.current.applyConstraints({ advanced: [{ torch: !torch } as MediaTrackConstraintSet] }); setTorch(!torch); } catch { setTorch(null); }
   }
 
+  if (error) return <div className="banner warn"><span>!</span><div className="txt">{error}</div></div>;
   return (
-    <div className={`scanner${compact ? ' compact' : ''}`}>
-      {!error && <div className="scanner-view"><video ref={video} playsInline muted /><div className="scanner-frame" aria-hidden="true" /></div>}
-      {error && <div className="banner warn"><span>!</span><div className="txt">{error}</div></div>}
-      <div className="row scanner-bar">
-        <form className="row grow" onSubmit={(e) => { e.preventDefault(); if (typed.trim()) { cb.current(normaliseCode(typed) ?? typed.trim()); setTyped(''); } }}>
-          <input className="input grow" inputMode="numeric" placeholder={t('g.scan.type')} value={typed} onChange={(e) => setTyped(e.target.value)} aria-label={t('g.scan.type')} />
-          <button className="btn">OK</button>
-        </form>
-        {torch != null && <button className="btn" aria-pressed={torch} onClick={toggleTorch}>{t('g.scan.torch')}</button>}
-      </div>
+    <div className="scanner-view">
+      <video ref={video} playsInline muted />
+      <div className="scanner-frame" aria-hidden="true" />
+      {torch != null && <button className="btn small scanner-torch" aria-pressed={torch} onClick={toggleTorch}>{t('g.scan.torch')}</button>}
     </div>
   );
 }

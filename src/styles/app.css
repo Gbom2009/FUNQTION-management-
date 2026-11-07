@@ -379,3 +379,7 @@ body.night .scanner-view { filter: none; }
   .pack-name { color: #000; font-size: 12px; }
   body { background: #fff; color: #000; }
 }
+.scanner-torch { position: absolute; right: 8px; bottom: 8px; }
+.pack-line.skipped { opacity: 0.45; }
+.pack-line.skipped .pack-name { font-style: italic; }
+.tree-mark { color: var(--fq-text-dim); margin-right: -6px; font-family: var(--fq-font-mono); }
