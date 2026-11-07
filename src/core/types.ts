@@ -1223,3 +1223,156 @@ export const DEFAULT_GIGDAY: GigDayDefaults = {
   wrapUpAt: '10:00',
   dayBeforeAt: '18:00',
 };
+
+// ---- apps 7–9: Library, Sets, Requests ----------------------------------------
+
+export const CROWD_TYPES = ['wedding', 'village_festival', 'club', 'after_party', 'private', 'company', 'kids'] as const;
+export type CrowdType = (typeof CROWD_TYPES)[number];
+export const MOODS = ['feelgood', 'euphoric', 'dark', 'emotional', 'party', 'chill'] as const;
+export type Mood = (typeof MOODS)[number];
+export const TRACK_FLAGS = ['classic', 'banger', 'singalong', 'clean', 'explicit', 'dutch'] as const;
+export type TrackFlag = (typeof TRACK_FLAGS)[number];
+export const TRACK_SOURCES = ['stream', 'download', 'converted', 'cd_rip', 'promo', 'own_production', 'unknown'] as const;
+export type TrackSource = (typeof TRACK_SOURCES)[number];
+
+export interface CueNote { id: ID; kind: 'drop' | 'mix_in' | 'mix_out' | 'break' | 'vocal_in' | 'warning' | 'tip'; atS?: number; text: string }
+/** Hot cue read from the DJ software (read-only copy). */
+export interface HotCue { index: number; atMs: number; name?: string; color?: string }
+
+/** One song version (artist + title + mix). Files are copies of it; stream-only tracks have none. */
+export interface Track extends Base {
+  artist: string;
+  title: string;
+  mix?: string;
+  album?: string;
+  label?: string;
+  year?: number;
+  genre?: string;
+  isrc?: string;
+  bpm?: number;
+  key?: string;              // Camelot, e.g. "8A"
+  keyConfidence?: number;    // 0–1, from our analysis
+  durationS?: number;
+  energy?: number;           // 1–10
+  moods: Mood[];
+  crowd: CrowdType[];
+  vocal?: 'vocal' | 'instrumental' | 'acapella';
+  flags: TrackFlag[];
+  rating?: number;           // 1–5
+  comment?: string;          // the file's own comment (without our prefix)
+  owner: MemberId | 'shared';
+  status: 'inbox' | 'ok' | 'needs_fix' | 'retired';
+  source: TrackSource;
+  sourceNote?: string;
+  sourceUrl?: string;
+  stream?: { service: string; ref?: string };  // stream-only tracks (Serato/djay streaming)
+  cueNotes: CueNote[];
+  hotCues?: HotCue[];        // read from Serato
+  artworkId?: ID;
+  analysedAt?: string;
+}
+
+export interface MusicLocation extends Base {
+  name: string;              // "MacBook Gijs – Music", "USB Zwart"
+  kind: 'laptop' | 'external' | 'usb' | 'nas';
+  owner: MemberId | 'shared';
+  rootPath?: string;         // absolute path in the desktop app; empty in the browser
+  lastScanAt?: string;
+  scanSummary?: { files: number; added: number; missing: number; errors: number };
+}
+
+export interface TrackFile extends Base {
+  trackId: ID;
+  locationId: ID;
+  path: string;              // relative to the location root
+  format: string;            // mp3, m4a, flac, wav, aiff…
+  sizeBytes: number;
+  mtime?: number;
+  bitrate?: number;          // kbps
+  sampleRate?: number;
+  audioHash: string;         // sha-256 of the audio part (tags excluded where we can)
+  quality: 'ok' | 'low' | 'transcode_suspect' | 'broken' | 'unknown';
+  cutoffHz?: number;
+  lastSeenAt: string;
+  missing?: boolean;
+}
+
+export interface Artwork extends Base { hash: string; blob: Blob; mime: string }
+
+export interface TrackLink extends Base {
+  fromTrackId: ID;
+  toTrackId: ID;
+  kind: 'good_after' | 'avoid_after' | 'mashup';
+  note?: string;
+  learned?: boolean;
+}
+
+// Sets (app 8)
+export const SECTION_KINDS = ['dinner', 'warmup', 'build', 'peak', 'classics', 'cooldown', 'afterparty', 'moment'] as const;
+export type SectionKind = (typeof SECTION_KINDS)[number];
+export interface SetSection {
+  id: ID;
+  kind: SectionKind;
+  label: string;
+  minutes: number;
+  energyFrom: number;
+  energyTo: number;
+  bpmMin?: number;
+  bpmMax?: number;
+  performer?: MemberId | 'b2b';
+  setSlotId?: ID;            // App 1 set slot
+  startAt?: string;          // ISO, when linked to a gig
+}
+export interface SetItem {
+  id: ID;
+  sectionId: ID;
+  trackId: ID;
+  performer?: MemberId;
+  role: 'planned' | 'backup' | 'must_play' | 'moment';
+  momentWishId?: ID;
+  note?: string;
+  locked?: boolean;
+}
+export interface SetTemplate extends Base {
+  key: string;
+  name: string;
+  eventTypes: EventType[];
+  sections: Omit<SetSection, 'id' | 'setSlotId' | 'startAt'>[];
+  rules: { maxSameArtistPerHour: number; explicitAllowed: boolean };
+  active: boolean;
+}
+export interface SetPlan extends Base {
+  name: string;
+  gigId?: ID;
+  templateKey?: string;
+  status: 'draft' | 'ready' | 'played';
+  sections: SetSection[];
+  items: SetItem[];
+  blocked: string[];         // normalised "artist - title" or "artist:<name>" from do-not-play wishes
+}
+
+/** What was really played (append-only). */
+export interface Play extends Base {
+  gigId?: ID;
+  setPlanId?: ID;
+  trackId?: ID;
+  rawArtist?: string;
+  rawTitle?: string;
+  at: string;                // ISO
+  performer?: MemberId;
+  source: 'tap' | 'plan' | 'serato_history' | 'request';
+  reaction?: 'fire' | 'good' | 'meh' | 'empty';
+  requestId?: string;
+}
+
+/** Requests (app 9): what a session left behind, without personal data. */
+export interface RequestStat extends Base {
+  gigId?: ID;
+  sessionCode: string;
+  artist: string;
+  title: string;
+  normKey: string;
+  votes: number;
+  status: string;
+  trackId?: ID;
+}

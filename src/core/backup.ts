@@ -17,7 +17,7 @@ export interface BackupFile {
   tables: Record<string, unknown[]>;
 }
 
-const BLOB_TABLES = new Set(['receipts', 'gearPhotos', 'venuePhotos']);
+const BLOB_TABLES = new Set(['receipts', 'gearPhotos', 'venuePhotos', 'artworks']);
 
 export async function exportAll(): Promise<BackupFile> {
   const tables: Record<string, unknown[]> = {};
@@ -38,7 +38,7 @@ export interface MergeResult { inserted: number; updated: number; skipped: numbe
 // records with the same value (the same bank line imported on both phones, the
 // same gear code, two pack lists for one gig). IndexedDB would reject the put
 // and abort the whole import, so these are resolved record by record.
-const UNIQUE: Partial<Record<string, string>> = { bankLines: 'hash', vatPeriods: 'key', gearItems: 'code', packLists: 'gigId', gigDays: 'gigId', taskTemplates: 'key' };
+const UNIQUE: Partial<Record<string, string>> = { bankLines: 'hash', vatPeriods: 'key', gearItems: 'code', packLists: 'gigId', gigDays: 'gigId', taskTemplates: 'key', setTemplates: 'key', artworks: 'hash' };
 
 type Row = Base & Record<string, unknown>;
 
@@ -118,6 +118,8 @@ export async function exportZip(): Promise<Uint8Array> {
   for (const r of photos) files[`gear/${r.id}.${ext(r.mime)}`] = new Uint8Array(await r.blob.arrayBuffer());
   const venuePhotos = (await db.venuePhotos.toArray()).filter((r) => !r.deletedAt);
   for (const r of venuePhotos) files[`venues/${r.id}.${ext(r.mime)}`] = new Uint8Array(await r.blob.arrayBuffer());
+  const artworks = (await db.artworks.toArray()).filter((r) => !r.deletedAt);
+  for (const r of artworks) files[`artwork/${r.id}.${ext(r.mime)}`] = new Uint8Array(await r.blob.arrayBuffer());
   files['README.txt'] = strToU8(`Funqtion backup ${data.exportedAt}\nImport via Instellingen > Gegevens & back-up.\n`);
   return zipSync(files, { level: 6 });
 }
@@ -175,9 +177,9 @@ export async function readBackup(bytes: Uint8Array, passphrase?: string): Promis
     const files = unzipSync(data);
     const file = JSON.parse(strFromU8(files['data.json'])) as BackupFile;
     const blobs = new Map<string, Blob>();
-    const meta = new Map([...((file.tables.receipts ?? []) as Receipt[]), ...((file.tables.gearPhotos ?? []) as GearPhoto[]), ...((file.tables.venuePhotos ?? []) as VenuePhoto[])].map((r) => [r.id, r.mime]));
+    const meta = new Map([...((file.tables.receipts ?? []) as Receipt[]), ...((file.tables.gearPhotos ?? []) as GearPhoto[]), ...((file.tables.venuePhotos ?? []) as VenuePhoto[]), ...((file.tables.artworks ?? []) as VenuePhoto[])].map((r) => [r.id, r.mime]));
     for (const [path, content] of Object.entries(files)) {
-      const m = path.match(/^(?:receipts|gear|venues)\/([^.]+)\./);
+      const m = path.match(/^(?:receipts|gear|venues|artwork)\/([^.]+)\./);
       if (m) blobs.set(m[1], new Blob([content as BlobPart], { type: meta.get(m[1]) ?? 'image/jpeg' }));
     }
     return { file, blobs };
