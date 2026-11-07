@@ -12,7 +12,7 @@ import {
   addLine, allConflicts, finishLoading, finishReturn, getOrCreatePackList, regenerate, savePackList, scanInto, useGearItems, useGearLocations, type MissingAction,
 } from '../data';
 import { Scanner, StatusPill, feedback, useNightMode } from '../components';
-import { loadByTransport, progress, trailerPayload, treeLines, type GearConflict } from '../domain/gear';
+import { loadByTransport, progress, trailerPayload, treeLines, type GearConflict, codeProblem } from '../domain/gear';
 
 type Mode = 'edit' | 'out' | 'back';
 const SETUPS = ['standard', 'dj_controller', 'dj_usb', 'dj_light'] as const satisfies readonly KitRole[];
@@ -59,7 +59,7 @@ export default function PackPage() {
       feedback(false);
       if (window.confirm(t('g.notOnListAdd', { name }))) { const l = await addLine(list, r.item.id, 1, t('g.addedAtLoading')); await scanInto(l, code, 'out', group); }
     } else if (r.outcome.kind === 'blocked') { feedback(false); setLast({ ok: false, text: t('g.blocked', { name, status: t(`g.status.${r.outcome.reason}`) }) }); }
-    else { feedback(false); setLast({ ok: false, text: r.outcome.kind === 'unknown' ? t('g.unknownCode', { code }) : t('g.notOnList', { name }) }); }
+    else { feedback(false); setLast({ ok: false, text: r.outcome.kind === 'unknown' ? (codeProblem(code) === 'check' ? t('g.badCheck', { code }) : t('g.unknownCode', { code })) : t('g.notOnList', { name }) }); }
   }
 
   // Tree per transport: a case with what's in it (indented), grouped by where the top case travels.

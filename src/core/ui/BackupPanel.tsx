@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useI18n } from '../i18n';
 import { useSession } from '../session';
-import { download, importMerge, makeBackup, readBackup } from '../backup';
+import { download, importMerge, makeBackup, readBackup, type MergeResult } from '../backup';
 import { fmtDateTime } from '../format';
 import { Field, useToast } from './index';
 import { runTaskSync } from '../../apps/bookings/domain/taskSync';
@@ -15,6 +15,7 @@ export function BackupPanel() {
   const [pass, setPass] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Uint8Array | null>(null);
+  const [result, setResult] = useState<MergeResult | null>(null);
   const ageDays = settings.lastBackupAt ? Math.floor((Date.now() - new Date(settings.lastBackupAt).getTime()) / 86_400_000) : null;
 
   async function doExport() {
@@ -32,7 +33,8 @@ export function BackupPanel() {
     try {
       const { file, blobs } = await readBackup(bytes, pass || undefined);
       const r = await importMerge(file, blobs);
-      toast(t('settings.importDone', { ...r }));
+      setResult(r);
+      toast(t('settings.importDone', { inserted: r.inserted, updated: r.updated, skipped: r.skipped }));
       setPending(null);
       runTaskSync();
     } catch (e) {
@@ -58,6 +60,14 @@ export function BackupPanel() {
         <input ref={fileRef} type="file" accept=".zip,.fqbackup,.json,application/json,application/zip" hidden
           onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) await doImport(new Uint8Array(await f.arrayBuffer())); }} />
       </div>
+      {result && result.conflicts.length > 0 && (
+        <div className="banner warn"><span>!</span><div className="txt">
+          <div className="strong">{t('backup.conflicts', { n: result.conflicts.length })}</div>
+          <ul className="small" style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+            {result.conflicts.slice(0, 20).map((c, i) => <li key={i}>{t(`backup.res.${c.resolution}`, { table: c.table, key: c.key })}</li>)}
+          </ul>
+        </div></div>
+      )}
     </div>
   );
 }

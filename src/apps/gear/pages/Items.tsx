@@ -10,13 +10,23 @@ import { alive, softDelete } from '../../../core/repo';
 import { todayStr } from '../../../core/dates';
 import { GEAR_CATEGORIES, type GearCategory, type GearItem, type GearOwner, type GearStatus, type LabelType } from '../../../core/types';
 import {
-  addPhoto, addSafetyTest, blankItem, disposeItem, logMaintenance, markFound, moveItem, reportIssue, saveItem, setParent, splitCounted, useGearItems, useGearLocations, useIssues, useLogs,
+  addPhoto, addSafetyTest, blankItem, disposeItem, logMaintenance, markFound, moveItem, relabel, reportIssue, saveItem, setParent, suggestedRelabel, splitCounted, useGearItems, useGearLocations, useIssues, useLogs,
   useMovements, usePhotoMeta, useSafetyTests, type ItemDraft,
 } from '../data';
 import { OwnerChip, StatusPill, Thumb } from '../components';
-import { ancestry, completeness, defaultLabelType, descendants } from '../domain/gear';
+import { ancestry, completeness, defaultLabelType, descendants, codeMatchesParent } from '../domain/gear';
 
 const OWNERS: GearOwner[] = ['gijs', 'coen', 'shared', 'unknown'];
+
+
+/** After an item moved to another case: offer a new code/label (the old code keeps scanning). */
+async function offerRelabel(itemId: string, t: ReturnType<typeof useI18n>['t'], toast: (m: string) => void) {
+  const s = await suggestedRelabel(itemId);
+  if (!s) return;
+  if (!window.confirm(t('g.relabelAsk', { name: s.item.name, old: s.item.code, new: s.newCode }))) return;
+  const r = await relabel(itemId);
+  if (r) toast(t('g.relabelDone', { code: r.code }));
+}
 
 export function ItemList() {
   const { t, lang } = useI18n();
@@ -34,7 +44,7 @@ export function ItemList() {
     .filter((i) => !cat || i.category === cat)
     .filter((i) => !owner || i.owner === owner)
     .filter((i) => !needle || [i.name, i.code, i.brand, i.model, i.serial].some((x) => x?.toLowerCase().includes(needle)))
-    .sort((a, b) => a.code.localeCompare(b.code));
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
   // Tree view: top-level items first, each followed by what's inside (indented).
   const depthOf = new Map<string, number>();
   let shown = rows;
@@ -113,9 +123,11 @@ export function ItemPage() {
   const containers = items.filter((i) => i.kind === 'container' && !inside.has(i.id) && i.status !== 'disposed');
   async function persist() {
     if (!d!.name.trim()) return;
+    const parentChanged = !isNew && stored?.parentId !== d!.parentId;
     const s = await saveItem(d!);
     setDirty(false); toast(t('common.saved'));
     if (isNew) nav(`/gear/items/${s.id}`, { replace: true });
+    else if (parentChanged) await offerRelabel(s.id, t, toast);
   }
   const txt = (k: 'name' | 'brand' | 'model' | 'serial' | 'supplier' | 'firmware' | 'laserClass' | 'notes', label: string) => (
     <Field label={label}><input value={d[k] ?? ''} onChange={(e) => set({ [k]: e.target.value || undefined } as Partial<ItemDraft>)} /></Field>
@@ -132,7 +144,8 @@ export function ItemPage() {
         <div style={{ minWidth: 0 }}>
           <div className="legend"><Link to="/gear/items">← {t('g.items')}</Link></div>
           <h1 style={{ overflowWrap: 'anywhere' }}>{isNew ? t('g.newItem') : d.name}</h1>
-          {!isNew && stored && <div className="sub row"><span className="mono">{stored.code}</span><StatusPill status={stored.status} /><OwnerChip owner={stored.owner} /></div>}
+          {!isNew && stored && <div className="sub row"><span className="mono">{stored.code}</span><StatusPill status={stored.status} /><OwnerChip owner={stored.owner} />
+            {!!stored.aliases?.length && <span className="tiny muted">{t('g.oldCodes')}: <span className="mono">{stored.aliases.join(', ')}</span></span>}</div>}
         </div>
         {!isNew && stored && (
           <div className="row">
@@ -141,6 +154,10 @@ export function ItemPage() {
           </div>
         )}
       </div>
+      {!isNew && stored && !codeMatchesParent(stored, stored.parentId ? items.find((x) => x.id === stored.parentId) : null) && (
+        <div className="banner warn" style={{ marginBottom: 'var(--s4)' }}><span>⟲</span><div className="txt">{t('g.codeMismatch')}{' '}
+          <button className="btn small" onClick={() => offerRelabel(stored.id, t, toast)}>{t('g.relabel')}</button></div></div>
+      )}
       <div className="layout-2">
         <div>
           {!isNew && stored && <Photos itemId={stored.id} />}
@@ -231,14 +248,16 @@ function TreeBox({ item, items }: { item: GearItem; items: GearItem[] }) {
             {kids.map((k) => (
               <div key={k.id} className="list-item">
                 <Link className="grow" to={`/gear/items/${k.id}`}><span className="mono tiny">{k.code}</span> {k.name}{k.kind === 'container' ? ` (${descendants(k.id, items).length})` : ''}</Link>
-                <button className="btn icon small ghost" aria-label={t('g.takeOut')} title={t('g.takeOut')} onClick={() => setParent(k, undefined)}>✕</button>
+                <button className="btn icon small ghost" aria-label={t('g.takeOut')} title={t('g.takeOut')} onClick={async () => { await setParent(k, undefined); await offerRelabel(k.id, t, toast); }}>✕</button>
               </div>
             ))}
             {!kids.length && <p className="small muted">{t('g.emptyCase')}</p>}
           </div>
           <select className="input" style={{ marginTop: 'var(--s2)' }} value="" aria-label={t('g.putIn')} onChange={async (e) => {
             const it = byId.get(e.target.value);
-            if (it && (await setParent(it, item.id)) === 'cycle') toast(t('g.cycle'));
+            if (!it) return;
+            if ((await setParent(it, item.id)) === 'cycle') toast(t('g.cycle'));
+            else await offerRelabel(it.id, t, toast);
           }}>
             <option value="">+ {t('g.putIn')}</option>
             {items.filter((i) => !blocked.has(i.id) && i.status !== 'disposed').sort((a, b) => a.name.localeCompare(b.name)).map((i) => <option key={i.id} value={i.id}>{i.code} {i.name}{i.parentId ? ` (${byId.get(i.parentId)?.name ?? ''})` : ''}</option>)}

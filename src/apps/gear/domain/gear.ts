@@ -12,15 +12,104 @@ import { addDays, addMinutes, addMonths, gigWindow, parseDate, rangesOverlap, to
 // ---------------------------------------------------------------------------
 // Codes
 
-export function nextCode(items: Pick<GearItem, 'code'>[]): string {
-  const max = items.reduce((m, i) => Math.max(m, Number(i.code.match(/^FQ-(\d+)$/)?.[1] ?? 0)), 0);
-  return `FQ-${String(max + 1).padStart(4, '0')}`;
+// Codes follow the case tree: a top-level item or case gets a number, and
+// whatever lives in a case gets the case's number + "." + its own number:
+//   FQ-01-7        flight case (top level)
+//   FQ-01.1-3      XDJ-AZ in that case
+//   FQ-01.2-8      its power cable
+// The last character is a check character (weighted mod 11, "X" = 10): it
+// catches every single mistyped character and every swap of two neighbours,
+// so a typo is rejected instead of opening the wrong item.
+// A code never changes by itself. When an item moves to another case for good,
+// the app offers a new label; the old code stays valid as an alias.
+// Old codes ("FQ-0042", no check character) keep working; their number counts
+// as their tree number, so a child of FQ-0009 becomes FQ-9.1-x.
+
+const CODE_ALPHABET = '0123456789.';
+
+export function checkChar(base: string): string {
+  let sum = 0;
+  for (let i = 0; i < base.length; i++) {
+    const v = CODE_ALPHABET.indexOf(base[i]);
+    if (v < 0) throw new Error(`bad code base: ${base}`);
+    sum += (v + 1) * ((i % 10) + 1);
+  }
+  const c = sum % 11;
+  return c === 10 ? 'X' : String(c);
 }
 
-/** Accepts "FQ-0042", "fq0042", "42" or a QR payload that contains a code. */
+export const makeCode = (base: string) => `FQ-${base}-${checkChar(base)}`;
+
+/** Tree number of a code: "01.2" for FQ-01.2-8, "9" for the old FQ-0009, null otherwise. */
+export function codeBase(code: string): string | null {
+  const m = code.match(/^FQ-(\d+(?:\.\d+)*)-[0-9X]$/);
+  if (m) return m[1];
+  const old = code.match(/^FQ-(\d{1,5})$/);
+  return old ? String(Number(old[1])) : null;
+}
+
+const sameNumber = (a: string, b: string) => Number(a) === Number(b);
+
+/** True if code `base` is a direct child of `parentBase` (FQ-01.3 is a child of FQ-01 and of the old FQ-0001). */
+function childNumber(base: string, parentBase: string): number | null {
+  const segs = base.split('.');
+  const p = parentBase.split('.');
+  if (segs.length !== p.length + 1) return null;
+  for (let i = 0; i < p.length; i++) if (!sameNumber(segs[i], p[i])) return null;
+  return Number(segs[segs.length - 1]);
+}
+
+type CodeItem = Pick<GearItem, 'code'> & { id?: string; aliases?: string[] };
+
+/** Next free code: under `parent` when the item lives in a case, otherwise a new top-level number. */
+export function nextCode(items: CodeItem[], parent?: CodeItem | null): string {
+  const bases = items.flatMap((i) => [i.code, ...(i.aliases ?? [])]).map(codeBase).filter((x): x is string => !!x);
+  const parentBase = parent ? codeBase(parent.code) : null;
+  if (parent && parentBase) {
+    const max = bases.reduce((m, b) => Math.max(m, childNumber(b, parentBase) ?? 0), 0);
+    return makeCode(`${parentBase}.${max + 1}`);
+  }
+  const max = bases.filter((b) => !b.includes('.')).reduce((m, b) => Math.max(m, Number(b)), 0);
+  return makeCode(String(max + 1).padStart(2, '0'));
+}
+
+/** The case a code says the item belongs in (its parent's tree number), or null for top level / old codes. */
+export function parentBaseOf(code: string): string | null {
+  const base = codeBase(code);
+  if (!base || !base.includes('.')) return null;
+  return base.slice(0, base.lastIndexOf('.'));
+}
+
+/** Does the item's code still match the case it is in now? (false = offer a new label) */
+export function codeMatchesParent(item: CodeItem, parent?: CodeItem | null): boolean {
+  if (/^FQ-\d{1,5}$/.test(item.code)) return true; // old flat codes make no tree claim
+  const claimed = parentBaseOf(item.code);
+  if (!parent) return claimed == null;
+  const pb = codeBase(parent.code);
+  return claimed != null && pb != null && claimed.split('.').length === pb.split('.').length && claimed.split('.').every((s, i) => sameNumber(s, pb.split('.')[i]));
+}
+
+export type CodeProblem = 'check' | null;
+
+/**
+ * Accepts a tree code ("FQ-01.2-8", "fq 01.2-8"), an old code ("FQ-0042", "fq0042", "42")
+ * or a QR payload that contains one. Returns null when it is not a code or the check
+ * character is wrong (see codeProblem for the reason).
+ */
 export function normaliseCode(raw: string): string | null {
-  const m = raw.trim().toUpperCase().match(/(?:FQ-?)?(\d{1,5})\s*$/) ?? raw.toUpperCase().match(/FQ-?(\d{1,5})/);
+  const up = raw.trim().toUpperCase().replace(/\s+/g, '');
+  const tree = up.match(/(?:FQ-?)?(\d+(?:\.\d+)*)-([0-9X])$/) ?? up.match(/FQ-?(\d+(?:\.\d+)*)-([0-9X])/);
+  if (tree) return checkChar(tree[1]) === tree[2] ? `FQ-${tree[1]}-${tree[2]}` : null;
+  if (/-DUP-/.test(up)) return up.match(/FQ-[\w.-]+/)?.[0] ?? null; // temporary code after a merge clash
+  const m = up.match(/(?:FQ-?)?(\d{1,5})$/) ?? up.match(/FQ-?(\d{1,5})(?![\d.])/);
   return m ? `FQ-${m[1].padStart(4, '0')}` : null;
+}
+
+/** Why a typed/scanned value was rejected: a tree code whose check character doesn't fit. */
+export function codeProblem(raw: string): CodeProblem {
+  const up = raw.trim().toUpperCase().replace(/\s+/g, '');
+  const tree = up.match(/(\d+(?:\.\d+)*)-([0-9X])$/);
+  return tree && checkChar(tree[1]) !== tree[2] ? 'check' : null;
 }
 
 // ---------------------------------------------------------------------------
