@@ -86,7 +86,15 @@ export interface Venue extends Base {
   soundLimitDb?: number;
   notes?: string;
   distanceKm?: Partial<Record<MemberId, number>>; // one way, from each member's home
+  // Navigation (Maps, Gig Day): the route goes to the loading entrance when it is set.
+  loadingEntrance?: GeoPin;
+  trailerParking?: GeoPin;
+  contactName?: string;   // venue contact for load-in (the gig's day contact lives on the gig)
+  contactPhone?: string;
 }
+
+/** A point picked on the map. */
+export interface GeoPin { lat: number; lng: number; note?: string }
 
 export interface AuditEntry {
   id: ID;
@@ -623,6 +631,14 @@ export interface Trip extends Base {
   roundTrip: boolean;
   source: 'venue' | 'manual' | 'estimate' | 'nav';
   parking?: number;       // cents
+  // Driven with Maps (source 'nav'). Simulated drives are never stored here.
+  startedAt?: string;     // ISO
+  endedAt?: string;
+  vehicleId?: ID;
+  trailerId?: ID;
+  vehicleName?: string;
+  trailerName?: string;
+  arrived?: boolean;
 }
 
 export interface HourEntry extends Base {
@@ -1042,3 +1058,34 @@ export interface WishItem extends Base {
   status: 'idea' | 'saving' | 'ordered' | 'bought' | 'dropped';
   boughtItemId?: ID;
 }
+
+// ---- navigation (Maps) ------------------------------------------------------
+
+/** A car or trailer, shared by Maps (routing) and Gear (trailer payload). */
+export interface VehicleRecord extends Base {
+  kind: 'car' | 'trailer';
+  name: string;
+  /** Maps' full profile (dimensions, weights, fuel, towing…); see src/apps/maps/features/vehicles/profiles.ts. */
+  spec: Record<string, unknown>;
+}
+/** The DJ gear trailer: Gear takes its maximum mass and empty weight from this record. */
+export const GEAR_TRAILER_ID = 'dj-gear';
+
+export interface VenuePhoto extends Base {
+  venueId: ID;
+  blob: Blob;
+  mime: string;
+}
+
+/** Per-gig day plan. Maps fills the drive part; Gig Day (app 6) adds the timeline. */
+export interface GigDay extends Base {
+  gigId: ID;
+  setupBufferMin?: number;
+  trafficMarginPct?: number;
+  travelMinutes?: number;   // drive time without margin
+  arrivedAt?: string;       // ISO, set by Maps when a real (not simulated) drive to this gig arrives
+  route?: { seconds: number; meters: number; fromName: string; towing: boolean; computedAt: number };
+}
+
+/** GPS track of a driven trip (id = trip id). Large: not in backups. */
+export interface TrackRecord { id: ID; points: [number, number][] }

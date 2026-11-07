@@ -14,6 +14,7 @@ import { GEAR_CATEGORIES, type GearCategory, type GearOwner, type GearRental, ty
 import { useGigs } from '../../bookings/data';
 import {
   buyWish, exportGearCsv, importGearCsv, returnRental, saveRental, saveWish, useGearItems, useGearLocations, usePhotoMeta, useRentals, useWishlist,
+  useTrailerWeights,
 } from '../data';
 import { completeness, insuranceTotals } from '../domain/gear';
 import starterCsv from '../../../../docs/gear-inventory/gear-list.csv?raw';
@@ -227,14 +228,19 @@ export function GearSettings() {
     <Field label={label} hint={hint}><input inputMode="numeric" value={settings[k] ?? ''} onChange={(e) => updateSettings({ [k]: e.target.value === '' && k === 'gearTrailerEmptyKg' ? undefined : Number(e.target.value) || 0 })} /></Field>
   );
   const itemsCount = useLiveQuery(() => db.gearItems.count(), []) ?? 0;
+  const tw = useTrailerWeights(settings);
   return (
     <div>
       <div className="page-head"><h1>{t('g.settingsTitle')}</h1></div>
       <div className="dash">
         <Section title={t('g.trailerSection')}>
           <div className="stack">
-            {num('gearTrailerMaxKg', t('g.trailerMax'), t('g.trailerMaxHint'))}
-            {num('gearTrailerEmptyKg', t('g.trailerEmptyKg'), t('g.trailerEmptyHint'))}
+            {tw.fromMaps
+              ? <p className="tiny muted">{t('g.trailerFromMaps', { max: tw.gearTrailerMaxKg, empty: tw.gearTrailerEmptyKg ?? '?' })}</p>
+              : <>
+                {num('gearTrailerMaxKg', t('g.trailerMax'), t('g.trailerMaxHint'))}
+                {num('gearTrailerEmptyKg', t('g.trailerEmptyKg'), t('g.trailerEmptyHint'))}
+              </>}
             {num('gearBufferMinutes', t('g.buffer'), t('g.bufferHint'))}
           </div>
         </Section>

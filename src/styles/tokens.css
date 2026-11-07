@@ -4,6 +4,10 @@
    brackets) and extended with what an app needs: status colours, member
    colours, form controls and a high-contrast light theme for sunlight. */
 
+/* Cascade layers, lowest first. Unlayered suite CSS stays on top of all of them.
+   suite-base: element defaults (app.css); theme/base/components/utilities: Maps (Tailwind v4). */
+@layer suite-base, theme, base, components, utilities;
+
 :root {
   color-scheme: dark;
   --fq-page: #040404;

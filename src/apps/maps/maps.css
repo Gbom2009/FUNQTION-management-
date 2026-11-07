@@ -1,0 +1,152 @@
+/* Funqtion Maps styles. Everything is limited to the Maps root (.fq-maps):
+   - Tailwind's reset is the scoped copy in preflight.scoped.css (no global reset)
+   - utilities are generated only from the Maps source files
+   - the --fq-* tokens are set on .fq-maps (the suite uses the same names globally)
+   Layer order (theme, base, components, utilities) is declared in src/styles/tokens.css. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "./preflight.scoped.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./";
+@import "maplibre-gl/dist/maplibre-gl.css";
+@import "./theme/tokens.css";
+
+/* Tailwind v4: brand tokens exposed as utilities (bg-fq-bg, text-fq-primary…).
+   `inline` keeps them as var() refs so the day/night swap works at runtime. */
+@theme inline {
+  --color-fq-bg: var(--fq-bg);
+  --color-fq-surface: var(--fq-surface);
+  --color-fq-line: var(--fq-line);
+  --color-fq-text: var(--fq-text);
+  --color-fq-strong: var(--fq-text-strong);
+  --color-fq-muted: var(--fq-muted);
+  --color-fq-primary: var(--fq-primary);
+  --color-fq-secondary: var(--fq-secondary);
+  --color-fq-warn: var(--fq-warn);
+  --color-fq-danger: var(--fq-danger);
+  --font-display: var(--fq-font-display);
+  --font-body: var(--fq-font-body);
+}
+
+.fq-maps {
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--fq-bg);
+  color: var(--fq-text);
+  font-family: var(--fq-font-body);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+}
+:where(.fq-maps button, .fq-maps a, .fq-maps input, .fq-maps select):focus-visible {
+  outline: 2px solid var(--fq-primary);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* Corner-bracket button — the site's signature control. */
+  .fq-bracket {
+    position: relative;
+    background: transparent;
+    color: var(--fq-text-strong);
+    border: 0;
+    cursor: pointer;
+  }
+  .fq-bracket::before, .fq-bracket::after {
+    content: ""; position: absolute; width: 12px; height: 12px;
+    border-color: currentColor; border-style: solid; pointer-events: none;
+  }
+  .fq-bracket::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+  .fq-bracket::after  { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+  .fq-bracket[aria-pressed="true"] { color: var(--fq-primary); }
+
+  /* --- Mobile-first controls (v2) -------------------------------------- */
+  .fq-card {
+    background: var(--fq-surface);
+    border: 1px solid var(--fq-line);
+    border-radius: 18px;
+  }
+  .fq-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 48px; padding: 0 1rem;
+    border-radius: 14px;
+    background: var(--fq-surface);
+    border: 1px solid var(--fq-line);
+    color: var(--fq-text-strong);
+    font-size: 14px; font-weight: 400;
+    transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+    cursor: pointer;
+  }
+  .fq-btn:active { transform: scale(0.97); }
+  .fq-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .fq-btn[aria-pressed="true"] { border-color: var(--fq-primary); color: var(--fq-primary); }
+  .fq-btn-primary {
+    background: var(--fq-primary); border-color: var(--fq-primary); color: #040404;
+    font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .fq-btn-ghost { background: transparent; border-color: transparent; }
+  .fq-icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px; flex: none;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--fq-bg) 88%, transparent);
+    border: 1px solid var(--fq-line);
+    color: var(--fq-text-strong);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    backdrop-filter: blur(12px);
+    transition: transform 120ms ease;
+  }
+  .fq-icon-btn:active { transform: scale(0.94); }
+  .fq-icon-btn[aria-pressed="true"] { color: var(--fq-primary); border-color: var(--fq-primary); }
+  .fq-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    min-height: 40px; padding: 0 0.9rem;
+    border-radius: 9999px;
+    background: var(--fq-surface); border: 1px solid var(--fq-line);
+    color: var(--fq-text); font-size: 13px; white-space: nowrap;
+  }
+  .fq-chip[aria-pressed="true"] { border-color: var(--fq-primary); color: var(--fq-primary); }
+  .fq-input {
+    width: 100%; min-height: 48px; padding: 0 0.9rem;
+    border-radius: 14px;
+    background: var(--fq-surface); border: 1px solid var(--fq-line);
+    color: var(--fq-text-strong); font-size: 16px; /* 16px: no iOS zoom-on-focus */
+    user-select: text;
+  }
+  .fq-input::placeholder { color: var(--fq-muted); }
+  .fq-label { display: block; margin-bottom: 0.35rem; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fq-muted); }
+  .fq-floating {
+    background: color-mix(in srgb, var(--fq-bg) 90%, transparent);
+    border: 1px solid var(--fq-line);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    backdrop-filter: blur(14px);
+  }
+}
+
+/* Inputs, selects, textareas get the v2 look by default inside the app */
+select.fq-input { appearance: none; padding-right: 2.2rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fq-muted) 50%), linear-gradient(135deg, var(--fq-muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+textarea.fq-input { padding: 0.7rem 0.9rem; min-height: 88px; }
+
+/* Map attribution: keep it visible but out of the way of the floating UI */
+.maplibregl-ctrl-top-right { top: calc(env(safe-area-inset-top) + 76px); }
+@media (min-width: 900px) { .maplibregl-ctrl-top-right { top: 12px; } }
+
+.maplibregl-ctrl-attrib { font-family: var(--fq-font-body); font-size: 10px; }
+
+/* Map popups on brand */
+.fq-popup .maplibregl-popup-content {
+  background: var(--fq-bg); border: 1px solid var(--fq-line); border-radius: 16px; padding: 14px; color: var(--fq-text);
+}
+.fq-popup .maplibregl-popup-close-button { color: var(--fq-muted); font-size: 18px; width: 28px; height: 28px; }
+.fq-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--fq-line); }
+.fq-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--fq-line); }
+
+/* Search pill: the ring goes on the pill, not on the bare input inside it */
+.fq-searchbar input:focus-visible { outline: none; }
+.fq-searchbar:focus-within { border-color: var(--fq-primary); }
+
+/* Drive mode: attribution collapses to the ⓘ button, right side above the bottom bar */
+.fq-mode-drive .maplibregl-ctrl-top-right { top: auto; bottom: calc(env(safe-area-inset-bottom) + 108px); right: 4px; }
+.fq-mode-drive .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner { display: none; }
+.fq-mode-drive .maplibregl-ctrl-attrib.maplibregl-compact-show { padding: 2px 24px 2px 4px; }

@@ -1,3 +1,6 @@
+/* Element defaults live in a low layer so the Maps app (Tailwind, scoped to
+   .fq-maps) can override them inside its own subtree. Layer order is set in tokens.css. */
+@layer suite-base {
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -22,6 +25,7 @@ h1 { font-family: var(--fq-font-display); font-size: var(--fq-size-h1); letter-s
 h2 { font-size: var(--fq-size-sub); }
 h3 { font-size: var(--fq-size-body); font-weight: 400; }
 p { margin: 0 0 var(--s3); }
+}
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---------- Layout ---------- */

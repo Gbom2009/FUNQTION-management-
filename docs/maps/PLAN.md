@@ -1,7 +1,7 @@
 # Funqtion Maps in the Hub — Merge Plan
 
 > Gijs's decision (Nov 2026): **FQ-maps moves into this repo** and becomes the hub's **Navigatie** app (`/maps`), sharing the database with apps 1–6. Gigs and venues are entered **once**, in the suite. The Instagram handle everywhere is **@funqtionofficial**.
-> Source: [github.com/Gbom2009/FQ-maps](https://github.com/Gbom2009/FQ-maps) (Tauri 2 + React + MapLibre, ~15k lines, 175 files, phases 1–5 done). Status of this document: plan, no code moved yet.
+> Source: [github.com/Gbom2009/FQ-maps](https://github.com/Gbom2009/FQ-maps) (Tauri 2 + React + MapLibre, ~15k lines, 175 files, phases 1–5 done). **Status: steps 1–4 built (v0.8.0)**; step 5 is Gig Day. See "What was built" at the end and `docs/ARCHITECTURE.md` → Navigatie.
 
 ## 1. What changes for the user
 
@@ -75,3 +75,20 @@
 - **Bundle size / memory on an iPad mini in drive mode**: Maps stays lazy-loaded and the drive screen unchanged; test on the device.
 - **Public services' usage policies** (Valhalla demo server, Overpass, PDOK, OpenFreeMap) are unchanged by the merge; the hub must keep FQ-maps' throttling and User-Agent.
 - **Licences:** OpenStreetMap (ODbL) attribution stays visible on the map; Natural Earth, milieuzones data and Piper voices (CC0/varied) keep their attribution in Settings → Over.
+
+## 6. What was built (v0.8.0) and where it differs from the plan
+
+- **Step 1** (PR #13): React 19.3, Vite 8.3, TypeScript 7.0, Vitest 5.1. No app code changes were needed.
+- **Step 2:** the code is a **plain copy** with a link to the old repo, not a `git subtree` (the available clone had a single squashed commit, so there was no history to keep). No splash inside the hub; the Maps logo leads back to the hub. Maps' strings moved into `nl.ts`/`en.ts` as `maps.*` keys.
+- **Step 3:** as planned, plus:
+  - arrival is stored on the gig day (`gigDays.arrivedAt`) until Gig Day's log exists
+  - simulated drives never leave the device, which is simpler and safer than filtering them out of mileage everywhere
+  - Setlist now shows **all** App 3 trips (also manual/venue ones), so the season stats match the mileage
+  - In Maps you can't create, rename or delete gigs, or delete venues; links go to Bookings.
+- **Step 4:** there's no "Exporteer alles" button in the old app yet (that repo can't be pushed from here). Instead, the import screen shows a one-line console command that copies the `fq-*` data, and it also accepts a saved JSON file. GPS tracks from the old app aren't imported.
+- **Story export:** the handle is now **@funqtionofficial**.
+
+**Still to do:**
+- Test drive mode on the iPad mini and iPhone (memory, GPS, voice) inside the hub.
+- Archive the old FQ-maps repo once the import has been done on every device.
+- Optional: opt-in GPS tracks in backups.

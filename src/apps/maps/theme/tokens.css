@@ -1,0 +1,58 @@
+/* ---------------------------------------------------------------------------
+   tokens.css — Funqtion Maps brand tokens
+   SOURCE: github.com/gbom2009/funqtion-site  css/tokens.css (+ img/logo.svg)
+   The site is near-black monochrome with ONE orange accent (#f68712),
+   JetBrains Mono for text and Archivo Black for display.
+
+   Not taken from the site (it has no equivalent) — app-only additions:
+     --fq-secondary  the site has a single accent; we use power-white as the
+                     "second" voice so the orange stays the hero.
+     --fq-warn / --fq-danger  functional colours for the HUD (speeding etc.).
+   VIDEO-BRAND.md was not available — re-check against it when found.
+   --------------------------------------------------------------------------- */
+
+.fq-maps {
+  color-scheme: dark;
+
+  /* Raw ramp (funqtion-site) */
+  --fq-page:         #040404;
+  --fq-dusk:         #141414;
+  --fq-hairline:     #363636;
+  --fq-machine-grey: #6c6c6c;
+  --fq-flat-grey:    #8d8d8d;
+  --fq-off-white:    #d9d9d9;
+  --fq-power-white:  #f0f0f0;
+  --fq-orange:       #f68712;
+
+  /* App semantic tokens (names from CLAUDE.md) */
+  --fq-bg:        var(--fq-page);
+  --fq-surface:   var(--fq-dusk);
+  --fq-line:      var(--fq-hairline);
+  --fq-text:      var(--fq-off-white);
+  --fq-text-strong: var(--fq-power-white);
+  --fq-muted:     var(--fq-flat-grey);
+  --fq-primary:   var(--fq-orange);
+  --fq-secondary: var(--fq-power-white);
+  --fq-warn:      #facc15;   /* app-only */
+  --fq-danger:    #ff3b3b;   /* app-only */
+  --fq-route:     var(--fq-primary);
+
+  --fq-font-display: "Archivo Black", "Arial Black", system-ui, sans-serif;
+  --fq-font-body:    "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --fq-ease-machine: cubic-bezier(0.14, 0.86, 0.37, 0.96);
+  --fq-touch: 64px; /* Drive-mode minimum target */
+}
+
+/* Day theme: same accent, inverted ramp. */
+.fq-maps[data-map-theme="day"] {
+  color-scheme: light;
+  --fq-bg:        #f0f0f0;
+  --fq-surface:   #ffffff;
+  --fq-line:      #c8c8c8;
+  --fq-text:      #141414;
+  --fq-text-strong: #040404;
+  --fq-muted:     #555555;
+  --fq-secondary: #040404;
+  --fq-primary:   #c96a00; /* darker orange so text on light clears AA */
+}
