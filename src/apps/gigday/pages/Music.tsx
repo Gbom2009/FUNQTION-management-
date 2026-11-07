@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../../core/db';
 import { useI18n } from '../../../core/i18n';
 import { Modal, Section } from '../../../core/ui';
 import type { MusicWish } from '../../../core/types';
@@ -21,8 +24,13 @@ export default function Music() {
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const hit = q.trim() ? dont.filter((w) => norm(`${w.text} ${w.track ?? ''}`).includes(norm(q.trim()))) : [];
 
+  const plan = useLiveQuery(() => db.setPlans.where('gigId').equals(gig.id).first(), [gig.id]);
   return (
     <div className="stack" style={{ gap: 'var(--s6)' }}>
+      <div className="row">
+        {plan ? <Link className="btn" to={`/sets/${plan.id}`}>{t('sets.openPlan')} ({plan.items.length})</Link> : <Link className="btn" to="/sets">{t('sets.makePlan')}</Link>}
+        {plan && <Link className="btn ghost" to={`/sets/${plan.id}/live`}>{t('sets.live')}</Link>}
+      </div>
       <div className="field">
         <span>{t('gd.mayWe')}</span>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('gd.mayWeHint')} />

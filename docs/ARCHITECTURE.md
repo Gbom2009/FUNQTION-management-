@@ -97,6 +97,62 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Sharing with the other phone:** "Plan delen" writes a small backup-format file of this gig day (gig, venue, steps, tasks, log, notes); "Plan importeren" merges it (newest change per record wins; logs are append-only).
 - **Route:** `/maps?gig=<id>` plans home → the loading entrance (or address) with the DJ gear trailer for a standard set-up; `&pick=1` starts placing the loading-door pin. Maps waits for its first database read before planning.
 
+## Apps 7–9: Funqtion Library, Sets, Requests (v0.10.0)
+
+Plan, decisions and Gijs's answers: `docs/music/PLAN.md` (§14). All three are lazy-loaded routes (`/library`, `/sets`, `/requests`).
+
+**Library (`src/apps/library/`)**
+- **Dexie v8** adds `musicTracks`, `trackFiles`, `musicLocations`, `artworks` (Blobs, backup ZIP under `artwork/`), `trackLinks`, `setTemplates`, `setPlans`, `plays`, `requestStats`, and the device-only `dirHandles`. The music table isn't called `tracks` because Maps' GPS table already has that name.
+- **Track ≠ file:** a track is the song version; files are copies per location (laptop, external drive, USB). Stream-only tracks (Serato/djay streaming) have no file.
+- **Copies are recognised by the audio hash** (SHA-256 of the audio, without ID3 tags), so retagging doesn't create a new track.
+- **File access (`fs.ts`):**
+  - Mac app: Tauri `fs` + `dialog` plugins, with scope `$HOME/**` and `/Volumes/**`
+  - Chrome/Edge: the File System Access API, with folder handles remembered in `dirHandles`
+  - tests: an in-memory source
+  - Safari/iPhone: read-only
+- **Pure, tested domain logic (`domain/`):**
+  - `keys.ts`: every key notation → Camelot, the harmonic score, key shift when pitching
+  - `names.ts`: filename/tag clean-up and `normKey` (the one normalisation used for library, history and requests)
+  - `id3.ts`: an ID3v2.3/2.4 writer that keeps every frame it doesn't own byte-for-byte. Serato stores cues and grids in GEOB frames, so this is required.
+  - `serato.ts`: crates (read/write), Markers2 hot cues (read), history sessions (read; field ids from community parsers ⚠️, verify on the Mac)
+  - `exports.ts`: Rekordbox XML (with hot cues) and M3U
+  - `analysis.ts`: FFT, BPM (onset autocorrelation), key (chroma + profiles), frequency cut-off (fake-320 check), energy suggestion
+  - `dupes.ts`: duplicate groups and which copy to keep
+- **Our tags live in the file's comment field** as a prefix: `E7 · BRUILOFT · BANGER · <your comment>`. That makes them visible and searchable in Serato and djay. Tags are written to MP3 only for now.
+- **Values Serato already wrote** (BPM, key, cues) are imported first; analysis only fills the gaps.
+
+**Sets (`src/apps/sets/`)**
+- **`domain/suggest.ts`** (pure, tested):
+  - the explainable score combines key (at the pitched tempo), BPM (±3/6%, half/double), energy against the section's target curve, crowd fit, learned reactions and transitions, and requests, minus variety penalties
+  - hard filters: do-not-plays (song or artist), tracks already used, explicit at family events
+  - `fillChain`: a beam search to fill a section
+  - also the energy curve and its warnings, `learn()` from play history (Bayesian smoothing), and the seeded templates per event type
+- **Plans from a gig** (`createPlanForGig`):
+  - the template for the event type
+  - Gijs/Coen/B2B taken from the set slots
+  - must-plays and special-moment tracks matched to the library
+  - do-not-plays become blocks
+- **Live view** (`/sets/:id/live`, no app chrome): tap to log a play, reactions, the request queue.
+- **History:** append-only `plays`, plus a Serato session import after the gig, and stats.
+
+**Requests (`server/requests/` + `src/apps/requests/`)**
+- **Server:** PocketBase on Gijs's home server, reached through Cloudflare Tunnel or Tailscale Funnel. Setup is in `server/requests/README.md`.
+  - The migration creates `sessions`, `requests`, `votes` and `blocks`, and switches off public sign-up on `users`.
+  - Personal fields (`deviceHash`, `shoutout`, `shoutName`) are `hidden`.
+  - Guests only use the routes in `pb_hooks/requests.pb.js` (search, request, vote, mine). DJ routes require a user login.
+  - Helpers (filter, `normKey`, limits, pause windows) are in `pb_hooks/lib/requests.js` and tested in Vitest. The folder has `{"type":"commonjs"}` for that.
+  - A nightly cron does the clean-up after 30 days.
+- **Guest page** (`pb_public/`): vanilla JS, about 15 kB plus fonts. Live updates via PocketBase realtime (SSE), polling as a fallback, and an offline queue.
+- **DJ side** (`client.ts` with the `pocketbase` SDK):
+  - the server URL and login are per device
+  - the session is built from the gig: pause windows from Gig Day moments, blocks, wedding mode, and the library index (artist + title only)
+  - `RequestsPanel` matches requests to the library and to what's playing now
+  - closing a session writes `requestStats` without personal data
+  - the QR table card uses the Gear label art
+- **Tested end to end** against a real PocketBase v0.40.6: API rules, limits, filter, blocks, pause windows, the couple's priority code, shout-out approval, and the guest page with live updates.
+
+**Mac app:** `.github/workflows/desktop-mac.yml` builds an unsigned `.app`/`.dmg` (Apple Silicon). It runs by hand or on version tags, because macOS CI minutes count 10×.
+
 ## Navigatie: Funqtion Maps (merged from FQ-maps, v0.8.0)
 
 - Lives in `src/apps/maps/` (copied from github.com/Gbom2009/FQ-maps, phases 1–5; its original spec is `docs/maps/FQ-MAPS-SPEC.md`, the merge plan `docs/maps/PLAN.md`). Route `/maps`, **lazy-loaded** (`React.lazy` in `src/App.tsx`), so MapLibre, routing and the voice code only load when Maps opens. Static data in `public/maps/` (milieuzones, NL/BE outline, glyph fonts), data scripts in `scripts/maps/`. External endpoints stay in `src/apps/maps/config/services.ts`.

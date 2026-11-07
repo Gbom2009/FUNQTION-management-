@@ -1,7 +1,7 @@
 # Funqtion Music: Library, Sets & Requests (apps 7, 8, 9)
 
 > Three connected music apps for Team Funqtion. **FEEL THE MUSIQ.**
-> Status: functional plan, **no code yet**. Builds on apps 1–6 and Maps, all in this repo (`docs/HANDOFF.md`).
+> Status: **built (v0.10.0)**: see §15 "What was built". Builds on apps 1–6 and Maps, all in this repo (`docs/HANDOFF.md`).
 > Numbering: Library = 7, Sets = 8, Requests = 9. The client portal (in `src/hub/apps.ts` as "portal") moves to app 10, and Navigatie (Maps) keeps its tile.
 > Facts about DJ software, APIs and licensing were checked in November 2026. Items marked ⚠️ depend on third parties or on legal advice, so re-check them when building.
 
@@ -645,3 +645,38 @@ The **Sets planner and USB check** can filter on "only 🟢" for gigs where that
 | 8 | **No questions to BumaStemra/Sena; no "licensed only" filter** | Not done. The contract keeps the client responsible for Buma/Stemra and Sena. |
 
 **Note on 4, written down once:** playing downloaded copies that weren't licensed at public, paid gigs is copyright infringement in the Netherlands, even when the venue's Buma/Sena licence covers the performance; that licence doesn't cover the copy itself. Streaming through the DJ software's own services (Beatport/Beatsource, SoundCloud, TIDAL… in Serato or djay) is the licensed route that doesn't require buying. The apps record where files come from but don't download or rip music themselves.
+
+## 15. What was built (v0.10.0)
+
+**Library (7)**
+- locations (Mac folders, external drives, USB), scanning with copies recognised by audio
+- tags, our tags in the comment field, Serato hot cues, artwork
+- BPM/key/energy analysis for what's missing, fake-320 check
+- inbox, problems (duplicates, missing, low quality, no analysis, unknown source)
+- stream-only tracks
+- tag write-back (MP3, Serato data kept)
+- export: Serato crate (also djay), Rekordbox XML with cues (→ free Rekordbox → CDJ stick), M3U
+- USB stick check
+
+**Sets (8)**
+- templates per event type, a plan per gig (B2B split, must-plays, moments, do-not-plays)
+- suggestions with reasons, "Sectie vullen"
+- energy curve with warnings
+- exports
+- live view behind the decks (tap to log, reactions, requests)
+- Serato history import, stats (most played, best reactions, rediscover, top requests)
+- links from Gig Day (Muziek → Set-plan, Booth → Live)
+
+**Requests (9)**
+- PocketBase server folder, the guest page (NL/EN, wedding mode, shout-outs after approval, now playing optional)
+- DJ queue (in library / fits now / not in library; accept, later, decline, played, block track/artist)
+- rules (limits, explicit, pause windows from Gig Day moments)
+- QR table card, statistics into Sets, privacy page and 30-day clean-up
+
+**Not built yet / later**
+- live "now playing" detection (Pro DJ Link for CDJs, live Serato history)
+- tag writing for M4A/FLAC/WAV/AIFF
+- MusicBrainz/Discogs lookups
+- the big screen (Funqtion Live)
+- converter/downloader integration (once the code is sent)
+- tested on a real Mac with Serato/djay files

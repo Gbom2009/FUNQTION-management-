@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../../core/db';
 import { useI18n } from '../../../core/i18n';
 import { Modal } from '../../../core/ui';
 import { keepAwake } from '../../maps/location/wakeLock';
@@ -22,6 +24,7 @@ export default function Booth() {
   const [log, setLog] = useState<QuickKind | null>(null);
   const [moments, setMoments] = useState(false);
   const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const plan = useLiveQuery(() => db.setPlans.where('gigId').equals(gig.id).first(), [gig.id]);
   useEffect(() => { keepAwake(true); return () => keepAwake(false); }, []);
   useEffect(() => { try { localStorage.setItem('fq-booth-red', red ? '1' : '0'); } catch { /* ignore */ } }, [red]);
 
@@ -41,6 +44,7 @@ export default function Booth() {
     <div className={`gd-booth ${red ? 'red' : ''}`}>
       <div className="gd-booth-top">
         <button className="gd-booth-exit" onPointerDown={startHold} onPointerUp={endHold} onPointerLeave={endHold} aria-label={t('gd.boothExit')}>{t('gd.boothExit')}</button>
+        {plan && <Link className="gd-booth-set-link" to={`/sets/${plan.id}/live`}>{t('sets.live')}</Link>}
         <button className="gd-booth-red" onClick={() => setRed(!red)} aria-pressed={red}>{t('gd.redMode')}</button>
       </div>
       <div className="gd-clock mono-num">{now.toTimeString().slice(0, 5)}</div>

@@ -6,6 +6,7 @@ import type {
   GearIssue, GearItem, GearKit, GearLocation, GearMovement, GearPhoto, GearRental, MaintenanceLog, MaintenancePlan, PackList, SafetyTest, WishItem,
   GigDay, TrackRecord, VehicleRecord, VenuePhoto,
   DayTask, GigLog, TaskTemplate, TimelineStep, VenueNote,
+  Artwork, MusicLocation, Play, RequestStat, SetPlan, SetTemplate, Track, TrackFile, TrackLink,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -76,6 +77,18 @@ export class FunqtionDB extends Dexie {
   taskTemplates!: Table<TaskTemplate, string>;
   gigLogs!: Table<GigLog, string>;
   venueNotes!: Table<VenueNote, string>;
+  // apps 7–9: Library, Sets, Requests
+  musicTracks!: Table<Track, string>;
+  trackFiles!: Table<TrackFile, string>;
+  musicLocations!: Table<MusicLocation, string>;
+  artworks!: Table<Artwork, string>;
+  trackLinks!: Table<TrackLink, string>;
+  setTemplates!: Table<SetTemplate, string>;
+  setPlans!: Table<SetPlan, string>;
+  plays!: Table<Play, string>;
+  requestStats!: Table<RequestStat, string>;
+  /** Device-only: folder handles granted in the browser (not in backups). */
+  dirHandles!: Table<{ id: string; handle: unknown }, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -158,6 +171,19 @@ export class FunqtionDB extends Dexie {
       gigLogs: 'id, gigId, at, type, updatedAt',
       venueNotes: 'id, venueId, gigId, updatedAt',
     });
+    // Apps 7–9 – Library, Sets, Requests.
+    this.version(8).stores({
+      musicTracks: 'id, artist, title, bpm, key, status, updatedAt',
+      trackFiles: 'id, trackId, locationId, audioHash, path, updatedAt',
+      musicLocations: 'id, updatedAt',
+      artworks: 'id, &hash, updatedAt',
+      trackLinks: 'id, fromTrackId, toTrackId, updatedAt',
+      setTemplates: 'id, &key, updatedAt',
+      setPlans: 'id, gigId, updatedAt',
+      plays: 'id, gigId, trackId, at, updatedAt',
+      requestStats: 'id, gigId, normKey, updatedAt',
+      dirHandles: 'id',
+    });
   }
 }
 
@@ -179,5 +205,6 @@ export const DATA_TABLES = [
   'safetyTests', 'gearRentals', 'wishlist',
   'vehicles', 'venuePhotos', 'gigDays',
   'timelineSteps', 'dayTasks', 'taskTemplates', 'gigLogs', 'venueNotes',
+  'musicTracks', 'trackFiles', 'musicLocations', 'artworks', 'trackLinks', 'setTemplates', 'setPlans', 'plays', 'requestStats',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];
