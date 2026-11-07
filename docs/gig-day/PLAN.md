@@ -2,6 +2,12 @@
 
 > App 6 of the Funqtion suite. **FEEL THE MUSIQ.**
 > Status: functional plan, no code yet. Builds on apps 1–5 (Bookings, Quotes & Invoices, Money, Contracts, Gear), all live in this repo in local mode, and on Gijs's own navigation app.
+> **Decisions made (answers from Gijs):**
+> - **Navigation app = [FQ-maps](https://github.com/Gbom2009/FQ-maps)** (Funqtion Maps, Tauri 2 + React, Windows exe now, iPhone/iPad sideloaded later). §6.1 is written for it: Gig Day sends the route as an FQ-maps route code; FQ-maps drives (trailer-aware) and sends drive time, arrival and km back.
+> - **No sync server for now.** MVP is local: the plan goes to the other phone by QR/file, logs are merged afterwards, location via Find My (§0.2, §7.2 option A).
+> - **Timeline durations: start with the defaults in §1.8 and customise later.** All of them are settings (per set-up: standard / DJ only), editable per gig.
+> - **Thank-you + review request: the next morning**, as part of the wrap-up (10:00 card), together with the final invoice draft.
+>
 > Phone-platform behaviour (iPhone notifications, background location) is described as of late 2026; items marked ⚠️ depend on what Apple allows a web app to do and should be re-checked when building.
 
 ## Contents
@@ -156,7 +162,7 @@ Built backwards and forwards from what's known, with defaults per set-up (Q4):
 | Set-up start | `gig.setupTime`, else sound check − 90 min (standard set) or − 30 min (DJ only) | App 1/5 |
 | Arrival / load-in | set-up − 15 min | defaults |
 | **Leave home** | arrival − travel − 15 min buffer − pick-up stop | below |
-| Travel time | `venue.distanceKm` per member ÷ average speed (60 km/h on mixed roads, 55 with the trailer), rounded up to 5 min; or the navigation app's estimate if it can provide one | App 1 / nav |
+| Travel time | **FQ-maps' drive time** for this gig (Valhalla, truck routing with the trailer, its tow speed caps 90/80/50 km/h) + its traffic margin, when it has been sent back (§6.1); otherwise an estimate from `venue.distanceKm` per member ÷ 60 km/h (55 with the trailer), rounded up to 5 min | FQ-maps / App 1 |
 | Breakdown | last set end + 60 min (standard) / 20 min (DJ only) | defaults |
 | Leave venue / home | breakdown end; home = + travel | defaults |
 
@@ -291,7 +297,7 @@ Mobile first (iPhone, often one-handed, often in the dark, often with headphones
 - **Tasks** from templates with owners (per phone; the split is agreed and shared via the plan).
 - **Log**: set start/end, overtime requests, issues, damage (→ App 5), vibe, notes, photos.
 - **Wrap-up**: played (App 1), trip km (App 3, from the venue distance), final invoice + overtime line (App 2), thank-you + review message, gear issues (App 5).
-- **Navigation**: "Route" opens your navigation app via a link/URL scheme (or Apple/Google Maps as fallback) to the loading entrance (§6.1).
+- **Navigation (FQ-maps)**: "Route" shows the FQ-maps route code as QR/file (works today), or opens `fqmaps://route?d=…` once FQ-maps registers the link; drive time, arrival and km come back via the return link (§6.1). Apple/Google Maps as fallback.
 - **Reminders via calendar export** (ICS with alarms) per person (§5).
 - **Share the plan** to the other phone: a QR code / file with this one gig day (no full backup needed).
 - Unit tests: timeline generation, shifting, overtime calculation, wrap-up proposals.
@@ -300,7 +306,7 @@ Mobile first (iPhone, often one-handed, often in the dark, often with headphones
 - **Live sync** of timeline, tasks and log between both phones; "Coen 4/6" live.
 - **Check-ins** ("Coen is vertrokken / aangekomen") and opt-in location at those moments.
 - **Web Push** for the few cross-person alerts (§5).
-- Navigation app writes **real km and arrival** back (shared database or callback).
+- FQ-maps reads and writes the shared database directly (gigs, venues, trips) instead of links.
 
 ### Later
 - Weather for outdoor gigs (KNMI warnings, rain radar), linked to contract A3/A4 (weather and force majeure).
@@ -340,24 +346,46 @@ Not annoying, because:
 
 ## 6. Navigation app and phone features
 
-### 6.1 Your navigation app
+### 6.1 FQ-maps (your navigation app)
 
-How this works depends on how your app is built (Q1: asked earlier too). The options, from simple to deep:
+**What FQ-maps already has** (read from its repo, Nov 2026):
+- **Routes**: Valhalla with trailer-aware truck routing and tow speed caps.
+- **Gigs and venues of its own**: leave-by from load-in time + set-up buffer + traffic margin, reminders while the app is open, venue cards with a load-in-door pin, a trailer-parking pin, contact, notes and photos.
+- **Share ETA.**
+- **A trip log** (km, start/end, car, trailer, gigId, arrived).
+- **Route hand-over without a server**: a compact route code `FQR1.<deflate+base64url>` (stops + route options + car + trailer) as a QR code or `.fqroute`/`.gpx` file. Its decoder already accepts the link form `fqmaps://route?d=FQR1.…`.
 
-| If your app… | Gig Day does | Back to Gig Day |
-|---|---|---|
-| is a **web app** with a URL | opens `https://…/route?lat=…&lng=…&label=…&note=…&ref=FQ-2027-014` (a URL template you set in Settings) | your app can link back `https://…/#/gigday/<gigId>?arrived=1&km=42.3` (a "return URL"), which logs arrival and km |
-| is an **iPhone app with a URL scheme** (e.g. `funqtionnav://`) | opens `funqtionnav://route?…` with the same fields | the same, via an `x-callback-url` style return link |
-| **shares the database** (later, with the sync server) | writes a "route request" record for the gig | your app writes a `trips` row (App 3, `source: 'nav'`) with the real km, and an arrival check-in |
-| none of these | opens **Apple Maps / Google Maps** to the loading entrance (as App 1's `mapsLink` already does) | km from the venue distance (App 3) |
+**Division of work:** Gig Day owns the **gig plan** (timeline, tasks, log, venue knowledge); FQ-maps owns **driving** (route, live drive time, guidance, trip km). Gigs and venues are entered **once**, in the suite, and handed to FQ-maps, so the two apps never disagree.
 
-What Gig Day sends:
-- the destination: the **loading entrance** (coordinates), else the venue address
-- the venue name and the gig reference
-- the notes: parking, loading door, "met aanhanger: niet door het centrum"
-- your departure time
+**Suite → FQ-maps ("Route" button):**
+1. **Works today, without any change to FQ-maps:** Gig Day builds an FQ-maps route code (same format, same pure functions as `features/handoff/routeCode.ts`), with these stops:
+   - start (home)
+   - pick-up at the other member's home, if needed
+   - the venue's **loading entrance**
+   
+   plus the trailer profile and route options. It's shown as a **QR code** (scan with FQ-maps on the iPad/iPhone) or saved as a `.fqroute` file.
+2. **One tap (small FQ-maps change):** register the `fqmaps://` URL scheme in FQ-maps (Tauri deep-link plugin; on iPhone a URL scheme in the app's Info.plist). Then "Route" in Gig Day simply opens `fqmaps://route?d=FQR1.…` and FQ-maps opens with the route planned.
+3. **Gig hand-over (FQ-maps change, recommended):** add an optional `gig` block to the payload (version 2):
+   - title, date, load-in time, set-up buffer, suite gig id
+   - venue name, address, load-in door, trailer parking, day contact, notes
+   
+   FQ-maps creates or updates its gig and venue from it, so its leave-by, reminders and Share ETA work with the suite's data.
 
-Because you drive with a trailer, the route should avoid low bridges, narrow centres and parking garages, if your app supports that.
+**FQ-maps → suite (results back):**
+- FQ-maps opens a **return link** `<suite>/#/gigday/<gigId>/nav?driveMin=…&arrivedAt=…&km=…&trip=…` (the suite URL is a setting in FQ-maps: the GitHub Pages hub, or a `funqtion://` scheme once the suite exe registers one). It sends:
+  - after "Bereken reistijd": the **drive time** for the timeline's leave time
+  - on arrival: the **arrival time** for the log
+  - after the trip: the **km** for App 3 (`trips`, `source: 'nav'`, linked to the gig)
+- **Fallback without the link:** FQ-maps' Setlist exports trips (JSON/CSV) → import in App 3 (matching on gig id/date), or the km from the venue distance.
+- **Venue pins back:** when you set or correct the load-in door or trailer parking on FQ-maps' map (it has pin-picking), a "send to suite" return link updates the venue profile, so the next gig routes there automatically.
+
+**Changes needed in FQ-maps** (small; done in that repo, which this session can read but not push to):
+1. register the `fqmaps://` deep link (Tauri deep-link plugin) and route it to the existing `decodeRoute`/`applyPayload`
+2. payload v2 with the optional `gig` block, upserting FQ-maps' gig and venue (keyed on the suite gig/venue id)
+3. a setting "Funqtion Hub-adres" and the return links (drive time, arrival, km, venue pins)
+4. (later) the Tauri notification plugin (FQ-maps' Phase 6), which also gives background reminders
+
+With the sync server later, both apps can read and write the shared database directly instead of links. The data shapes above are the same, so nothing is wasted.
 
 ### 6.2 Calls, WhatsApp, SMS, e-mail
 - **Call:** `tel:` link. **WhatsApp:** `https://wa.me/<number>?text=…` (already used in App 1's message composer), with prepared texts: "We zijn er over 15 min", "We zijn later", "Aangekomen, waar mogen we laden?". **SMS:** `sms:`. **E-mail:** `mailto:`.
@@ -421,14 +449,16 @@ Because you drive with a trailer, the route should avoid low bridges, narrow cen
 
 ## 9. Open questions
 
-1. **Your navigation app:** how is it built (web app, iPhone app, something else)? Can it be opened with a link containing a destination (URL scheme or web URL)? Can it send something back (arrival, km), or write to a shared database? Does it know about the trailer (route restrictions)?
-2. **Sync server:** do you want to build the home server now (PocketBase + Tailscale), so both phones see tasks, progress and check-ins live? Or start with the MVP (plan shared by QR, logs merged afterwards)?
-3. **Location:** is sharing with each other in Find My (permanent, private between the two of you) OK as the MVP solution? Do you want the day contact to see "we're on our way"?
-4. **Timeline defaults:** how long do set-up, sound check and breakdown usually take for the **standard set** and for **DJ only**? How long before doors do you want everything ready? Usual buffer for travel?
-5. **Departure:** who usually drives (and tows the trailer), do you often start from two different homes, and where do you meet?
-6. **Reminders:** which calendar do you use on your iPhones (Apple Calendar, Google)? Are calendar alarms OK as the MVP reminder? Which reminders do you really want (day before, leave −30, leave, wrap-up)?
-7. **Special moments:** which ones come up most (opening dance, speeches, cake, bouquet, countdown, birthday song)? Do you announce on the mic yourselves (MC role)?
-8. **After the gig:** thank-you + review request the same night or the next morning? Which review link (Google, Facebook)? Final invoice the next day?
-9. **Venue data:** is it OK to store Wi-Fi passwords and door/access codes on the phones (encrypted in backups)? Any venues you play often, so we can fill those profiles first?
-10. **Vibe and log:** a 1–5 scale fine, or something else ("dansvloer leeg / halfvol / vol / los")? Anything else you want to log every gig?
-11. **Multi-gig days:** do you sometimes play two gigs on one day (App 1 allows it without build-up and with ≥ 2 h between)? Then the Today screen needs a "next gig" switch and a shared timeline.
+Answered: navigation app (FQ-maps), sync (no server for now), timeline durations (defaults, customise later), thank-you timing (next morning). Still open:
+
+1. **FQ-maps changes:** may Gig Day rely on the small FQ-maps changes in §6.1 (deep link `fqmaps://`, payload v2 with the gig, return links)? They're done in the FQ-maps repo. Until then the QR/file route code works without changes.
+2. **One source for gigs and venues:** OK that gigs and venues are entered in the suite (App 1) and FQ-maps receives them, instead of maintaining them in both apps?
+3. **Location:** Find My sharing between you two as the MVP solution? (FQ-maps' "convoy mode" would need a relay server, so it waits for the server too.)
+4. **Departure:** who usually drives and tows, do you often start from two different homes, and where do you meet?
+5. **Reminders:** which calendar app do you use (Apple Calendar, Google)? Calendar alarms OK as the MVP reminder until FQ-maps/the suite run as native iPhone apps?
+6. **Special moments:** which ones come up most, and do you announce on the mic yourselves (MC role)?
+7. **Review link:** which one (Google, Facebook)?
+8. **Venue data:** OK to store Wi-Fi passwords and access codes on the phones (encrypted in backups)? Venues you play often, to fill in first?
+9. **Vibe and log:** a 1–5 scale, or words ("leeg / halfvol / vol / los")? Anything else to log every gig?
+10. **Multi-gig days:** do you sometimes play two gigs on one day? Then the Today screen needs a "next gig" switch.
+11. **Instagram handle:** the suite uses **@funqtionofficial**, FQ-maps' story export uses **@funqtion1**. Which one is right?
