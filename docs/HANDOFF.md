@@ -23,7 +23,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **Navigation app:** how it's built is unknown (asked twice). Trips use manual km plus a per-venue memory.
 - **Existing gear list** (for investments/assets) and **real price list** not given. The seeded prices (e.g. €150/h DJ set) are placeholders.
 - Items marked ⚖️ in the plans (9% vs 21% VAT for DJ sets, VAT on cancellation fees, deductions) need an accountant **once they register**.
-- App 4 (Contracts) is built in local mode. Not done: online signing relay, automatic e-mail, the remaining open questions in `docs/contracts/PLAN.md` §11 (rider contents, insurance, legal names, lawyer review). Existing devices keep their stored terms text: App 2 settings shows a button to take over version 2026-12. Apps 5–8 (gig-day, gear, portal, navigation link) aren't started. No sync server yet.
+- App 4 (Contracts) is built in local mode. Not done: online signing relay, automatic e-mail, the remaining open questions in `docs/contracts/PLAN.md` §11 (rider contents, insurance, legal names, lawyer review). Existing devices keep their stored terms text: App 2 settings shows a button to take over version 2026-12. App 5 (Gear & Inventory) has a functional plan in `docs/gear-inventory/PLAN.md` (no code yet; open questions in §9). Apps 6–8 (gig-day, portal, navigation link) aren't started. No sync server yet.
 
 ## 3. Conventions in the code
 
