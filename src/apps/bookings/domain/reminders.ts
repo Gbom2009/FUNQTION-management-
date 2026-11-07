@@ -1,4 +1,4 @@
-import type { Assignee, Enquiry, Gig, Invoice, Payment, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
+import type { Assignee, Contract, Enquiry, Gig, Invoice, Payment, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
 import { invoiceState } from '../../invoicing/domain/money';
 import { addDays, addMonths, at, parseDate } from '../../../core/dates';
 
@@ -25,7 +25,7 @@ export interface DesiredTask {
 const STALE_DAYS = 60; // never generate tasks that were due more than this long ago
 
 export function desiredTasks(
-  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[]; invoices?: Invoice[]; payments?: Payment[] },
+  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[]; invoices?: Invoice[]; payments?: Payment[]; contracts?: Contract[] },
   s: Settings,
   now = new Date(),
 ): DesiredTask[] {
@@ -66,6 +66,8 @@ export function desiredTasks(
 
     if (g.stage === 'quote_sent') {
       const latest = (quotesByGig.get(g.id) ?? []).sort((a, b) => b.version - a.version)[0];
+      // Accepted quote waiting for a signed contract: the contract reminders take over.
+      if (latest?.status === 'accepted') continue;
       const sentAt = latest?.sentAt ?? g.quoteSentAt ?? g.stageChangedAt;
       const v = latest?.version ?? 1;
       const sent = new Date(sentAt);
@@ -127,6 +129,36 @@ export function desiredTasks(
       }
     }
   }
+  // Contracts (app 4): review the generated draft, chase the signature, send the deposit invoice.
+  const gigById = new Map(data.gigs.map((g) => [g.id, g]));
+  for (const c of data.contracts ?? []) {
+    if (c.deletedAt || c.status === 'cancelled') continue;
+    const g = gigById.get(c.gigId);
+    if (!g || g.deletedAt || g.stage === 'lost' || g.stage === 'cancelled') continue;
+    const p = { title: g.title, date: g.date, number: c.number };
+    if (c.status === 'draft' && c.kind === 'ours') {
+      push({ ruleKey: `ct-review:${c.id}`, kind: 'contract_review', assignedTo: g.ownerId, gigId: g.id, dueAt: c.createdAt, params: p });
+    }
+    if ((c.status === 'sent' || c.status === 'viewed') && !c.remindersPaused && c.sentAt) {
+      const v = c.currentVersionId ?? '';
+      push({ ruleKey: `ct-r1:${c.id}:${v}`, kind: 'contract_reminder', assignedTo: g.ownerId, gigId: g.id, personId: g.clientPersonId,
+        dueAt: addDays(new Date(c.sentAt), s.contractReminderDays ?? 3).toISOString(), templateKind: 'contract_reminder', params: p });
+      if (c.signBy) {
+        push({ ruleKey: `ct-r2:${c.id}:${v}`, kind: 'contract_reminder', assignedTo: g.ownerId, gigId: g.id, personId: g.clientPersonId,
+          dueAt: addDays(at(c.signBy, '10:00'), -1).toISOString(), templateKind: 'contract_reminder', params: p });
+        push({ ruleKey: `ct-exp:${c.id}:${c.signBy}`, kind: 'contract_expired', assignedTo: g.ownerId, gigId: g.id,
+          dueAt: at(c.signBy, '18:00').toISOString(), params: { ...p, signBy: c.signBy } });
+      }
+    }
+    if (c.status === 'signed' && c.depositInvoiceId) {
+      const dep = invoices.find((i) => i.id === c.depositInvoiceId);
+      if (dep && dep.status === 'draft') {
+        push({ ruleKey: `ct-dep:${c.id}`, kind: 'contract_deposit', assignedTo: g.ownerId, gigId: g.id, invoiceId: dep.id,
+          dueAt: c.signedAt ?? c.updatedAt, params: p });
+      }
+    }
+  }
+
   // Payment reminders (dunning) for sent invoices: friendly, firm, formal.
   const today = now.toISOString().slice(0, 10);
   for (const inv of invoices) {

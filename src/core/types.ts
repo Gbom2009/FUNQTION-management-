@@ -341,6 +341,7 @@ export interface AvailabilityBlock extends Base {
 export const TASK_KINDS = [
   'reply_enquiry', 'follow_up_quote', 'quote_expiry', 'option_expiry', 'music_wishes', 'final_check',
   'gear_check', 'mark_played', 'invoice', 'payment', 'review_request', 'rebook', 'dunning', 'custom',
+  'contract_review', 'contract_reminder', 'contract_expired', 'contract_deposit',
 ] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 
@@ -377,6 +378,7 @@ export interface Interaction extends Base {
 export const TEMPLATE_KINDS = [
   'enquiry_available', 'enquiry_unavailable', 'quote_follow_up', 'music_wishes', 'final_check',
   'thank_you_review', 'rebook', 'quote_send', 'invoice_send', 'reminder_1', 'reminder_2', 'reminder_3', 'custom',
+  'contract_send', 'contract_reminder', 'contract_signed',
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
 
@@ -448,6 +450,14 @@ export interface Settings {
   taxSetAsidePct: number;   // indication for income tax + Zvw
   assetMinCents: number;    // capitalise from (excl. VAT)
   lastBackupAt?: string;
+  // ---- Contracts (app 4) ----
+  /** Cancellation scale for consumers (softer far ahead). `cancellationScale` applies to business clients. */
+  cancellationScaleConsumer: { daysBefore: number; pct: number }[];
+  contractSignByDays: number;      // date hold while the contract is unsigned
+  contractReminderDays: number;    // first reminder after sending
+  contractAutoCountersign: boolean;
+  overtimeRateHalfHour: number;    // cents per started half hour
+  memberSignatures?: Partial<Record<MemberId, string>>; // PNG data URL, drawn once per member, device only
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -489,6 +499,17 @@ export const DEFAULT_SETTINGS: Settings = {
   mileageRate: 23,
   taxSetAsidePct: 30,
   assetMinCents: 45000,
+  cancellationScaleConsumer: [
+    { daysBefore: 183, pct: 10 },
+    { daysBefore: 91, pct: 25 },
+    { daysBefore: 30, pct: 50 },
+    { daysBefore: 14, pct: 75 },
+    { daysBefore: 0, pct: 100 },
+  ],
+  contractSignByDays: 7,
+  contractReminderDays: 3,
+  contractAutoCountersign: true,
+  overtimeRateHalfHour: 7500,
 };
 
 // ---- App 3: Money & Accounting ------------------------------------------------
@@ -627,4 +648,165 @@ export interface SplitRule {
   method: 'fixed' | 'by_lineup';
   gijsPct: number;        // fixed / shared items
   soloPct: number;        // by_lineup: share for the solo performer
+}
+
+// ---- App 4: Contracts ----------------------------------------------------------
+
+export type ClientKind = 'consumer' | 'business';
+/** together = quote and contract go out at once, one "akkoord" covers both;
+ *  after_quote = contract follows the accepted quote; none = quote acceptance is enough. */
+export type ContractFlow = 'together' | 'after_quote' | 'none';
+export type ClauseMode = 'required' | 'on' | 'off' | 'auto';
+export type ClauseWhen = 'outdoor' | 'setup' | 'consumer' | 'business';
+export const CLAUSE_CATEGORIES = ['core', 'money', 'cancellation', 'liability', 'venue', 'rights', 'other'] as const;
+export type ClauseCategory = (typeof CLAUSE_CATEGORIES)[number];
+
+export interface Clause extends Base {
+  key: string;              // stable id, e.g. "A1"
+  category: ClauseCategory;
+  version: number;          // bumped on every edit; contracts keep the version they were sent with
+  titleNl: string;
+  titleEn: string;
+  bodyNl: string;           // plain text with {{placeholders}}; lines starting with "- " are bullets
+  bodyEn: string;
+  bodyBizNl?: string;       // business-client variant (optional)
+  bodyBizEn?: string;
+  only?: ClientKind;        // e.g. "no cooling-off period" is consumer-only
+  locked?: boolean;         // cannot be switched off
+  note?: string;            // internal legal note
+  sort: number;
+  active: boolean;
+}
+
+export interface TemplateClause { key: string; mode: ClauseMode; when?: ClauseWhen }
+
+export interface ContractTemplate extends Base {
+  name: string;
+  nameEn?: string;
+  eventTypes: EventType[];
+  clientKind: ClientKind;
+  flow: ContractFlow;
+  signByDays?: number;
+  introNl?: string;
+  introEn?: string;
+  clauses: TemplateClause[];
+  riderId?: ID;
+  active: boolean;
+}
+
+export interface RiderItem { id: ID; nl: string; en: string }
+
+export interface Rider extends Base {
+  name: string;
+  version: number;
+  technical: RiderItem[];
+  hospitality: RiderItem[];
+  active: boolean;
+}
+
+export interface CancellationRow { pct: number; daysBefore: number; from?: string; until?: string }
+
+export interface ContractSnapshot {
+  language: Lang;
+  clientKind: ClientKind;
+  number: string;
+  issuedOn: string;               // yyyy-mm-dd
+  client: PartySnapshot;
+  funqtion: PartySnapshot & { legalNames?: string };
+  event: {
+    title: string; reference: string; date: string; startTime: string; endTime: string; setupTime?: string;
+    venueName: string; venueAddress: string; outdoor: boolean;
+    sets: { start: string; end: string; label?: string; performers: string }[];
+  };
+  services: { description: string; qty: string; amount: number }[];
+  extras: { id: ID; description: string; amount: number }[];
+  price: {
+    total: number; totalWithAllExtras: number; vatNote: string; depositPct: number; depositAmount: number;
+    balance: number; paymentTermDays: number; overtimeRate: number;
+  };
+  cancellation: CancellationRow[];
+  intro: string;
+  specialTerms: string;
+  clauses: { key: string; version: number; nr: number; title: string; body: string }[];
+  rider: { name: string; version: number; technical: string[]; hospitality: string[]; venueNotes: string[] } | null;
+  terms: { version: string; sha256: string; text: string };
+  quote?: { id: ID; number?: string; version: number; accepted: boolean };
+  addendum?: { label: string; parentLabel: string; parentHash: string; reason: string; changes: { field: string; old: string; new: string }[] };
+}
+
+export type ContractStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'cancelled';
+
+export interface Contract extends Base {
+  number: string;
+  gigId: ID;
+  quoteId?: ID;
+  templateId?: ID;
+  kind: 'ours' | 'theirs';        // theirs = the client's own paper, only tracked
+  clientKind: ClientKind;
+  language: Lang;
+  flow: ContractFlow;
+  status: ContractStatus;
+  clauseOverrides: Record<string, boolean>;
+  specialTerms?: string;
+  overtimeRate?: number;
+  riderId?: ID;
+  title?: string;                  // theirs: description of their document
+  signBy?: string;                 // yyyy-mm-dd
+  sentAt?: string;
+  signedAt?: string;
+  currentVersionId?: ID;           // latest frozen version (sent)
+  signedVersionId?: ID;            // latest fully signed version (contract or addendum)
+  pendingAddendum?: { reason: string };
+  depositInvoiceId?: ID;
+  cancelledAt?: string;
+  cancelledBy?: 'client' | 'us' | 'force_majeure';
+  cancellationReason?: string;
+  cancellationFee?: number;
+  remindersPaused?: boolean;
+}
+
+export interface ContractVersion extends Base {
+  contractId: ID;
+  seq: number;
+  kind: 'contract' | 'addendum';
+  label: string;                   // "v1", "Addendum 1"
+  snapshot: ContractSnapshot;
+  contentHash: string;             // sha256 of the canonical JSON of the snapshot
+  prevHash?: string;               // addendum: hash of the signed version it amends
+  frozenAt: string;
+  status: 'sent' | 'superseded' | 'signed' | 'void';
+  signedAt?: string;
+}
+
+export type SignatureMethod = 'drawn_on_device' | 'reply_akkoord' | 'signed_pdf' | 'countersign';
+
+export interface ContractSignature extends Base {
+  contractId: ID;
+  versionId: ID;
+  party: 'client' | 'funqtion';
+  name: string;
+  role?: string;
+  email?: string;
+  memberId?: MemberId;
+  method: SignatureMethod;
+  channel?: 'whatsapp' | 'email' | 'phone' | 'in_person' | 'other';
+  level: 'SES';
+  signedAt: string;               // ISO
+  contentHash: string;            // hash of the version that was signed
+  consents: { contract: boolean; terms: string; termsSha256: string; photoOptOut: boolean };
+  selectedExtras?: ID[];
+  imageDataUrl?: string;
+  evidenceDataUrl?: string;
+  device?: string;
+  place?: string;
+  note?: string;
+}
+
+export interface ContractEvent extends Base {
+  contractId: ID;
+  versionId?: ID;
+  type: 'generated' | 'sent' | 'signed_client' | 'signed_funqtion' | 'fully_signed' | 'reminder' | 'note' | 'addendum_started'
+    | 'withdrawn' | 'cancelled' | 'copy_sent' | 'deposit_invoice' | 'conflict';
+  at: string;
+  note?: string;
 }

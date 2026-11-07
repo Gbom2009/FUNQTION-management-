@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Asset, AuditEntry, AvailabilityBlock, BankAccount, BankLine, BankRule, Category, Enquiry, Expense, HourEntry, PartnerEntry, Receipt, Trip, VatPeriod, Gig, Interaction, Invoice, Member, Organisation, Package, Payment, Person,
   Product, Quote, Review, Settings, StatusChange, Task, Template, Venue,
+  Clause, Contract, ContractEvent, ContractSignature, ContractTemplate, ContractVersion, Rider,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -40,6 +41,14 @@ export class FunqtionDB extends Dexie {
   assets!: Table<Asset, string>;
   partnerEntries!: Table<PartnerEntry, string>;
   vatPeriods!: Table<VatPeriod, string>;
+  // app 4: Contracts
+  clauses!: Table<Clause, string>;
+  contractTemplates!: Table<ContractTemplate, string>;
+  riders!: Table<Rider, string>;
+  contracts!: Table<Contract, string>;
+  contractVersions!: Table<ContractVersion, string>;
+  contractSignatures!: Table<ContractSignature, string>;
+  contractEvents!: Table<ContractEvent, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -82,6 +91,16 @@ export class FunqtionDB extends Dexie {
       partnerEntries: 'id, date, memberId, updatedAt',
       vatPeriods: 'id, &key, updatedAt',
     });
+    // App 4 – Contracts.
+    this.version(4).stores({
+      clauses: 'id, key, updatedAt',
+      contractTemplates: 'id, updatedAt',
+      riders: 'id, updatedAt',
+      contracts: 'id, gigId, quoteId, status, updatedAt',
+      contractVersions: 'id, contractId, status, updatedAt',
+      contractSignatures: 'id, contractId, versionId, updatedAt',
+      contractEvents: 'id, contractId, at, updatedAt',
+    });
   }
 }
 
@@ -98,5 +117,6 @@ export const DATA_TABLES = [
   'persons', 'organisations', 'venues', 'enquiries', 'gigs', 'quotes', 'products', 'statusChanges',
   'availability', 'tasks', 'interactions', 'templates', 'reviews', 'invoices', 'payments', 'packages',
   'categories', 'expenses', 'receipts', 'bankAccounts', 'bankLines', 'bankRules', 'trips', 'hours', 'assets', 'partnerEntries', 'vatPeriods',
+  'clauses', 'contractTemplates', 'riders', 'contracts', 'contractVersions', 'contractSignatures', 'contractEvents',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

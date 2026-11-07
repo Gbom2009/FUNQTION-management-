@@ -29,6 +29,13 @@ export function diff(oldRow: Record<string, unknown> | undefined, newRow: Record
   return changes;
 }
 
+// Evidence that may never change once written: the frozen text of a contract
+// version and every field of a signature. Corrections are new versions/addenda.
+const FROZEN: Partial<Record<DataTable, string[]>> = {
+  contractVersions: ['snapshot', 'contentHash', 'prevHash', 'contractId', 'seq', 'kind', 'frozenAt'],
+  contractSignatures: ['contractId', 'versionId', 'party', 'name', 'method', 'signedAt', 'contentHash', 'consents', 'imageDataUrl', 'evidenceDataUrl', 'selectedExtras'],
+};
+
 type NewRecord<T extends Base> = Omit<T, keyof Base> & Partial<Base>;
 
 /** Insert or update a record, writing an audit entry with the field diff. */
@@ -48,6 +55,7 @@ export async function save<T extends Base>(table: DataTable, rec: NewRecord<T> |
     } as T;
     const changes = diff(existing as unknown as Record<string, unknown>, row as unknown as Record<string, unknown>);
     if (existing && Object.keys(changes).length === 0) return existing;
+    if (existing && FROZEN[table]?.some((k) => k in changes)) throw new Error('frozen_record');
     await t.put(row);
     const entry: AuditEntry = {
       id: uid(), table, rowId: row.id, action: existing ? (row.deletedAt && !existing.deletedAt ? 'delete' : 'update') : 'insert',

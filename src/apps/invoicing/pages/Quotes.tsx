@@ -130,6 +130,7 @@ export function QuoteEditor() {
         </div>
       </div>
 
+      {gig && <ContractBanner quote={d} gigId={gig.id} />}
       {!editable && <div className="banner info" style={{ marginBottom: 'var(--s4)' }}><span>🔒</span><div className="txt">{t('q.locked')}{' '}
         {d.status !== 'superseded' && <button className="btn small" onClick={async () => { const n = await newQuoteVersion(d); nav(`/invoicing/quotes/${n.id}`); }}>{t('quote.newVersion')}</button>}</div></div>}
       {d.status === 'accepted' && d.acceptedAt && (
@@ -229,7 +230,7 @@ function AcceptDialog({ quote, onClose }: { quote: Quote; onClose: () => void })
   async function submit() {
     if (!me || !name.trim()) return;
     const r = await acceptQuote(quote, me.id, { name: name.trim(), via, note, selected: sel });
-    toast(r === 'conflict' ? t('q.conflictWarn') : t('q.confirmed'));
+    toast(r === 'conflict' ? t('q.conflictWarn') : r === 'contract' ? t('q.contractNext') : t('q.confirmed'));
     onClose();
   }
   return (
@@ -302,5 +303,32 @@ function CancelDialog({ quote, onClose }: { quote: Quote; onClose: () => void })
       {pv.depositTotal > pv.fee && <div className="banner warn"><span>!</span><div className="txt">{t('i.cancelRefund')}</div></div>}
       <label className="check"><input type="checkbox" checked={cancelGig} onChange={(e) => setCancelGig(e.target.checked)} />{t('i.cancelGigToo')}</label>
     </Modal>
+  );
+}
+
+/** App 4 link: shows whether this gig works with a contract and opens/creates it. */
+function ContractBanner({ quote, gigId }: { quote: Quote; gigId: string }) {
+  const { t } = useI18n();
+  const nav = useNavigate();
+  const info = useLiveQuery(async () => {
+    const gig = await db.gigs.get(gigId);
+    if (!gig) return undefined;
+    const contracts = (await db.contracts.where('gigId').equals(gigId).toArray()).filter((c) => !c.deletedAt && c.status !== 'cancelled');
+    const templates = (await db.contractTemplates.toArray()).filter((x) => !x.deletedAt && x.active);
+    const tpl = templates.find((x) => x.eventTypes.includes(gig.eventType)) ?? templates.find((x) => x.eventTypes.includes('other'));
+    return { contract: contracts[0], flow: contracts[0]?.flow ?? tpl?.flow ?? 'none' };
+  }, [gigId, quote.updatedAt]);
+  if (!info || (info.flow === 'none' && !info.contract)) return null;
+  const open = async () => {
+    const { createContract } = await import('../../contracts/data');
+    const c = info.contract ?? await createContract(gigId, { quoteId: quote.id });
+    nav(`/contracts/${c.id}`);
+  };
+  return (
+    <div className="banner info" style={{ marginBottom: 'var(--s4)' }}><span>§</span>
+      <div className="txt">{info.contract ? t('q.contractExists', { number: info.contract.number, status: t(`ct.status.${info.contract.status}`) }) : t(`q.contractFlow.${info.flow as 'together' | 'after_quote'}`)}
+        <div style={{ marginTop: 'var(--s2)' }}><button className="btn small" onClick={open}>{info.contract ? t('q.openContract') : t('q.makeContract')}</button></div>
+      </div>
+    </div>
   );
 }

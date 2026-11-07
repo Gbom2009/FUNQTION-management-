@@ -34,7 +34,7 @@ src-tauri/         native shell: Windows exe now, iOS/iPadOS later
 The **gig** is the hub record. Future apps hang off `gigId`:
 
 - Invoicing: copies `quote.lines` into an invoice, then sets the gig's `invoicedAt`/`paidAt` (shown in the pipeline).
-- Contracts: created when a gig moves to *Confirmed*.
+- Contracts: generated from the accepted quote; signing moves the gig to *Confirmed* and creates the deposit invoice (see `docs/contracts/PLAN.md`).
 - Gig-day planner: reads `setSlots`, `contacts`, `venue`, `musicWishes`.
 - Gear: packing lists per `eventType`. `setupRequired` and `venue.houseSound` decide what to bring.
 - Navigation: reads `venue` addresses for today's gigs, writes back trips (km) for accounting.
@@ -67,9 +67,20 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Backups v2** (`core/backup.ts`): a ZIP with `data.json` + receipt files, optionally AES-256-GCM encrypted with a passphrase (PBKDF2-SHA256). v1 JSON backups still import.
 - **Accountant pack** (`reports.ts`): year report PDF + CSVs (invoices, receipts, expenses, trips, assets, partners, profit per gig, hours) + receipt images in one ZIP.
 
+## App 4: Contracts (local mode)
+
+- Lives in `src/apps/contracts/`; adds the Dexie version 4 tables `clauses`, `contractTemplates`, `riders`, `contracts`, `contractVersions`, `contractSignatures` and `contractEvents`.
+- `domain/library.ts` holds the default clauses (NL/EN, business variants), one template per event type and two riders; seeded by `ensureContractLibrary()` (adds missing clause keys after updates).
+- `domain/render.ts` is pure and tested: clause selection (template mode, client kind, outdoor/setup conditions, overrides), placeholders, the cancellation table with real dates, warnings, addendum diffs and the SHA-256 content hash over canonical JSON.
+- **Frozen versions:** sending (or signing in person) freezes a `contractVersion` with a snapshot of everything the client sees (parties, gig, lines, clauses, rider, terms text + hash). `repo.save()` refuses to change a frozen snapshot or any signature field (`frozen_record`). Addenda are new versions with `prevHash` pointing to the signed version they amend.
+- **Triggers** (`data.ts → finishIfComplete`): when both parties signed, the quote is accepted (with the extras chosen at signing), the gig is confirmed (with the conflict check) and a deposit invoice draft is created. App 2's `acceptQuote` asks `flowForGig()` first: *together* signs the sent contract, *after quote* creates the contract and leaves the gig at *quote sent*, *none* confirms as before.
+- PDFs: `domain/pdfDoc.ts` (pdfmake, same paper style as App 2) with rider and terms annexes and a signature certificate page; the content hash is printed in every footer.
+- Reminders: contract review, signature reminders (r1 after N days, r2 the day before the sign-by date), sign-by expired and "send deposit invoice" come from the shared reminder engine.
+
 ## Business rules (agreed)
 
 - **VAT:** not registered → documents show no VAT and the note "Er wordt geen btw in rekening gebracht". Switch to KOR or VAT mode in Quotes & Invoices → Settings after registering.
 - **Options ("optie"):** supported, with a default expiry of 14 days (configurable).
+- **Contracts:** consumers get the softer cancellation scale, businesses the original one. The gig is booked when the agreement is signed (or, without an agreement, when the quote is accepted).
 - **Profit split:** 50/50 by default; adjustable per period (fixed % or by lineup per gig).
 - **Double bookings:** the same person can play two gigs on one day only if neither needs build-up (`setupRequired = false`) and there are at least 2 hours between them (configurable). Overlaps and blocked days are hard conflicts. Enquiries, options and sent quotes give soft warnings.

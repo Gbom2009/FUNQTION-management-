@@ -9,7 +9,7 @@ import { centsFromInput, euro, fmtDate, fmtDateLong, inputFromCents } from '../.
 import { addMonths, parseDate, toDateStr } from '../../../core/dates';
 import { nowIso, save, softDelete, uid } from '../../../core/repo';
 import {
-  EVENT_TYPES, WISH_KINDS, type Gig, type GigContact, type MemberId, type MusicWish, type Invoice,
+  EVENT_TYPES, WISH_KINDS, type Gig, type GigContact, type MemberId, type MusicWish, type Invoice, type Contract,
   type Review, type SetSlot,
 } from '../../../core/types';
 import { blankGig, byId, createGig, mapsLink, personLabel, useGigs, useOrgs, usePersons, useQuotes, useTasks, useVenues } from '../data';
@@ -387,14 +387,27 @@ function GigDocuments({ gig, disabled }: { gig: Gig; disabled: boolean }) {
   const nav = useNavigate();
   const quotes = useQuotes(gig.id).sort((a, b) => b.version - a.version);
   const invoices = ((useLiveQuery(() => db.invoices.where('gigId').equals(gig.id).toArray(), [gig.id]) ?? []) as Invoice[]).filter((i) => !i.deletedAt);
+  const contracts = ((useLiveQuery(() => db.contracts.where('gigId').equals(gig.id).toArray(), [gig.id]) ?? []) as Contract[]).filter((c) => !c.deletedAt);
   return (
-    <Section title={t('gig.documents')} actions={<button className="btn small primary" disabled={disabled} onClick={async () => {
-      const { createQuoteForGig } = await import('../../invoicing/data');
-      const q = await createQuoteForGig(gig.id);
-      nav(`/invoicing/quotes/${q.id}`);
-    }}>+ {t('gig.newQuote')}</button>}>
-      {quotes.length + invoices.length === 0 ? <p className="muted small">—</p> : (
+    <Section title={t('gig.documents')} actions={<>
+      <button className="btn small" disabled={disabled} onClick={async () => {
+        const { createContract } = await import('../../contracts/data');
+        const c = await createContract(gig.id);
+        nav(`/contracts/${c.id}`);
+      }}>+ {t('ct.contract')}</button>
+      <button className="btn small primary" disabled={disabled} onClick={async () => {
+        const { createQuoteForGig } = await import('../../invoicing/data');
+        const q = await createQuoteForGig(gig.id);
+        nav(`/invoicing/quotes/${q.id}`);
+      }}>+ {t('gig.newQuote')}</button></>}>
+      {quotes.length + invoices.length + contracts.length === 0 ? <p className="muted small">—</p> : (
         <div className="list">
+          {contracts.map((c) => (
+            <Link key={c.id} className="list-item" to={`/contracts/${c.id}`}>
+              <span className="grow">{t('ct.contract')} {c.number}{c.signBy && c.status === 'sent' ? <span className="muted small"> · {t('ct.signBy')} {c.signBy}</span> : null}</span>
+              <span className="pill">{c.pendingAddendum ? t('ct.status.addendum') : t(`ct.status.${c.status}`)}</span>
+            </Link>
+          ))}
           {quotes.map((q) => (
             <Link key={q.id} className="list-item" to={`/invoicing/quotes/${q.id}`}>
               <span className="grow">{t('pdf.quote')} {q.number ?? ''} <span className="muted small">v{q.version}</span></span>

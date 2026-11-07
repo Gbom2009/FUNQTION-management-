@@ -26,7 +26,7 @@ export function mailtoLink(email: string | undefined, subject: string, body: str
 export const MERGE_FIELDS = [
   'firstName', 'gigTitle', 'gigDate', 'startTime', 'endTime', 'venue', 'city', 'eventType', 'amount',
   'validUntil', 'reviewLink', 'sender', 'series', 'quoteNumber', 'invoiceNumber', 'amountDue', 'dueDate', 'iban',
-  'accountHolder', 'depositPct',
+  'accountHolder', 'depositPct', 'contractNumber', 'signBy',
 ] as const;
 
 type Seed = { kind: TemplateKind; language: Lang; name: string; subject?: string; body: string };
@@ -80,4 +80,16 @@ export const DEFAULT_TEMPLATES: Seed[] = [
     body: 'Beste {{firstName}},\n\nOndanks eerdere herinneringen is factuur {{invoiceNumber}} van {{amountDue}} (vervallen op {{dueDate}}) nog niet betaald.\n\nWij verzoeken je dit bedrag binnen 14 dagen na ontvangst van deze aanmaning over te maken naar {{iban}} t.n.v. {{accountHolder}}, onder vermelding van {{invoiceNumber}}.\n\nBetaal je niet binnen deze termijn, dan zijn wij genoodzaakt buitengerechtelijke incassokosten in rekening te brengen volgens de wettelijke staffel (bij dit bedrag: [BEDRAG INVULLEN], minimaal € 40), vermeerderd met de wettelijke rente.\n\nMet vriendelijke groet,\n{{sender}} – Team Funqtion' },
   { kind: 'reminder_3', language: 'en', name: 'Final notice (14 days)', subject: 'Final notice invoice {{invoiceNumber}}',
     body: 'Dear {{firstName}},\n\nDespite earlier reminders, invoice {{invoiceNumber}} of {{amountDue}} (due {{dueDate}}) has not been paid.\n\nPlease transfer this amount within 14 days of receiving this notice to {{iban}} in the name of {{accountHolder}}, quoting {{invoiceNumber}}.\n\nIf payment is not received within this term, we will charge extrajudicial collection costs according to the statutory scale (for this amount: [FILL IN AMOUNT], minimum € 40), plus statutory interest.\n\nKind regards,\n{{sender}} – Team Funqtion' },
+  { kind: 'contract_send', language: 'nl', name: 'Overeenkomst versturen', subject: 'Overeenkomst {{contractNumber}} – {{gigTitle}}',
+    body: 'Hoi {{firstName}},\n\nIn de bijlage vind je de overeenkomst voor {{gigTitle}} op {{gigDate}}, met daarin wat we afspreken, de prijs ({{amount}}), onze rider en onze algemene voorwaarden. Lees alles rustig door.\n\nKlopt alles? Reageer dan op dit bericht met "akkoord" (en welke extra\'s je wilt), of onderteken de PDF en stuur hem terug. We houden de datum voor je vast tot {{signBy}}. Daarna ontvang je de aanbetalingsfactuur van {{depositPct}}%.\n\nVragen of iets aanpassen? Laat het gerust weten.\n\nGroet,\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
+  { kind: 'contract_send', language: 'en', name: 'Send agreement', subject: 'Agreement {{contractNumber}} – {{gigTitle}}',
+    body: 'Hi {{firstName}},\n\nAttached is the agreement for {{gigTitle}} on {{gigDate}}: what we agree, the price ({{amount}}), our rider and our terms and conditions. Please read it carefully.\n\nAll good? Reply to this message with "agreed" (and which extras you want), or sign the PDF and send it back. We hold the date for you until {{signBy}}. After that you will receive the deposit invoice of {{depositPct}}%.\n\nQuestions or changes? Just let us know.\n\nCheers,\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
+  { kind: 'contract_reminder', language: 'nl', name: 'Overeenkomst – herinnering', subject: 'Overeenkomst {{contractNumber}} – {{gigTitle}}',
+    body: 'Hoi {{firstName}},\n\nHeb je de overeenkomst voor {{gigTitle}} op {{gigDate}} al kunnen bekijken? We houden de datum voor je vast tot {{signBy}}. Een kort "akkoord" als reactie op ons bericht met de PDF is genoeg. Vragen? Bel of app gerust.\n\nGroet,\n{{sender}} – Team Funqtion' },
+  { kind: 'contract_reminder', language: 'en', name: 'Agreement – reminder', subject: 'Agreement {{contractNumber}} – {{gigTitle}}',
+    body: 'Hi {{firstName}},\n\nHave you had a chance to look at the agreement for {{gigTitle}} on {{gigDate}}? We hold the date for you until {{signBy}}. A short "agreed" in reply to our message with the PDF is enough. Questions? Just call or text us.\n\nCheers,\n{{sender}} – Team Funqtion' },
+  { kind: 'contract_signed', language: 'nl', name: 'Getekende overeenkomst', subject: 'Getekend: overeenkomst {{contractNumber}} – {{gigTitle}}',
+    body: 'Hoi {{firstName}},\n\nTop, de overeenkomst voor {{gigTitle}} op {{gigDate}} is rond! In de bijlage vind je de getekende versie voor je eigen administratie. Je ontvangt binnenkort de aanbetalingsfactuur; daarna staat de datum definitief vast.\n\nWe hebben er zin in!\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
+  { kind: 'contract_signed', language: 'en', name: 'Signed agreement', subject: 'Signed: agreement {{contractNumber}} – {{gigTitle}}',
+    body: 'Hi {{firstName}},\n\nGreat, the agreement for {{gigTitle}} on {{gigDate}} is done! Attached is the signed version for your records. You will receive the deposit invoice soon; after that the date is final.\n\nWe are looking forward to it!\n{{sender}} – Team Funqtion\nFEEL THE MUSIQ' },
 ];

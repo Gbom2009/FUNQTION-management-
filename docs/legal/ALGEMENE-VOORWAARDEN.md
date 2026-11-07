@@ -1,8 +1,8 @@
 # Algemene voorwaarden / General terms – Team Funqtion
 
-> **CONCEPT / DRAFT (versie 2026-11).** Opgesteld als startpunt; laat dit nakijken door een jurist of vergelijk met een branchemodel voordat je het gebruikt. De app vult de annuleringsstaffel, betaaltermijn en aanbetaling automatisch in vanuit Instellingen (hieronder met de standaardwaarden). De bron staat in `src/apps/invoicing/terms.ts` en is in de app aan te passen onder *Offertes & facturen → Instellingen*.
+> **CONCEPT / DRAFT (versie 2026-12).** Opgesteld als startpunt; laat dit nakijken door een jurist of vergelijk met een branchemodel voordat je het gebruikt. De app vult de annuleringsstaffel, betaaltermijn en aanbetaling automatisch in vanuit Instellingen (hieronder met de standaardwaarden). De bron staat in `src/apps/invoicing/terms.ts` en is in de app aan te passen onder *Offertes & facturen → Instellingen*.
 
-## ALGEMENE VOORWAARDEN TEAM FUNQTION (versie 2026-11)
+## ALGEMENE VOORWAARDEN TEAM FUNQTION (versie 2026-12)
   
 
 ### 1. Definities
@@ -19,7 +19,7 @@
 
 ### 3. Offertes en totstandkoming
 3.1 Offertes zijn vrijblijvend en geldig tot de op de offerte vermelde datum.  
-3.2 De overeenkomst komt tot stand zodra de opdrachtgever de offerte schriftelijk accepteert (ook per e-mail of WhatsApp) of een aanbetaling doet.  
+3.2 Stuurt Funqtion een gig-overeenkomst, dan komt de overeenkomst tot stand zodra de opdrachtgever die ondertekent of schriftelijk accepteert (ook per e-mail of WhatsApp). Stuurt Funqtion geen gig-overeenkomst, dan komt de overeenkomst tot stand zodra de opdrachtgever de offerte schriftelijk accepteert of een aanbetaling doet.  
 3.3 Een optie op een datum is vrijblijvend en vervalt automatisch op de vermelde vervaldatum.  
 3.4 Het optreden betreft vrijetijdsbesteding op een specifieke datum. Het wettelijke herroepingsrecht (bedenktijd) is daarom niet van toepassing (art. 6:230p sub e BW).  
   
@@ -51,7 +51,17 @@
 
 ### 8. Annulering door de opdrachtgever
 8.1 Annuleren kan alleen schriftelijk (ook per e-mail of WhatsApp). De datum van ontvangst geldt als annuleringsdatum.  
-8.2 Bij annulering is de opdrachtgever de volgende vergoeding verschuldigd over het afgesproken totaalbedrag:
+8.2 Bij annulering is de opdrachtgever de volgende vergoeding verschuldigd over het afgesproken totaalbedrag.
+
+Consumenten (particuliere opdrachtgevers):
+
+- 183 dagen of meer voor het optreden: 10%
+- 91 tot 183 dagen voor het optreden: 25%
+- 30 tot 91 dagen voor het optreden: 50%
+- 14 tot 30 dagen voor het optreden: 75%
+- minder dan 14 dagen voor het optreden of op de dag zelf: 100%
+
+Zakelijke opdrachtgevers (bedrijven, verenigingen, stichtingen, overheden):
 
 - 90 dagen of meer voor het optreden: 25%
 - 30 tot 90 dagen voor het optreden: 50%
@@ -94,7 +104,7 @@
 
 ---
 
-## GENERAL TERMS AND CONDITIONS TEAM FUNQTION (version 2026-11)
+## GENERAL TERMS AND CONDITIONS TEAM FUNQTION (version 2026-12)
   
 
 ### 1. Definitions
@@ -111,7 +121,7 @@
 
 ### 3. Quotes and agreement
 3.1 Quotes are without obligation and valid until the date stated on the quote.  
-3.2 The agreement is concluded as soon as the client accepts the quote in writing (including e-mail or WhatsApp) or pays a deposit.  
+3.2 If Funqtion sends a gig agreement, the agreement is concluded as soon as the client signs it or accepts it in writing (including e-mail or WhatsApp). If Funqtion does not send a gig agreement, the agreement is concluded as soon as the client accepts the quote in writing or pays a deposit.  
 3.3 An option on a date is non-binding and expires automatically on the stated expiry date.  
 3.4 The performance is a leisure service on a specific date. The statutory right of withdrawal (cooling-off period) therefore does not apply (art. 6:230p(e) Dutch Civil Code).  
   
@@ -143,7 +153,17 @@
 
 ### 8. Cancellation by the client
 8.1 Cancellation must be made in writing (including e-mail or WhatsApp). The date of receipt is the cancellation date.  
-8.2 On cancellation the client owes the following fee on the agreed total:
+8.2 On cancellation the client owes the following fee on the agreed total.
+
+Consumers (private clients):
+
+- 183 days or more before the performance: 10%
+- 91 to 183 days before the performance: 25%
+- 30 to 91 days before the performance: 50%
+- 14 to 30 days before the performance: 75%
+- less than 14 days before or on the day: 100%
+
+Business clients (companies, associations, foundations, public bodies):
 
 - 90 days or more before the performance: 25%
 - 30 to 90 days before the performance: 50%

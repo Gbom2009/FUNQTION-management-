@@ -3,6 +3,7 @@ import { save, uid } from './repo';
 import { DEFAULT_SETTINGS, type Category, type Member, type Package, type Product, type Template } from './types';
 import { DEFAULT_TEMPLATES } from '../apps/bookings/domain/messaging';
 import { TERMS_EN, TERMS_NL } from '../apps/invoicing/terms';
+import { ensureContractLibrary } from '../apps/contracts/data';
 
 export const DEFAULT_MEMBERS: Member[] = [
   { id: 'gijs', name: 'Gijs', color: '#f68712' },
@@ -22,6 +23,7 @@ export async function ensureSeed() {
   for (const t of DEFAULT_TEMPLATES) {
     if (!existing.some((e) => e.kind === t.kind && e.language === t.language)) await save<Template>('templates', { ...t }, { actor: 'system' });
   }
+  await ensureContractLibrary();
   if ((await db.products.count()) === 0) {
     type P = Omit<Product, 'id' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>;
     const starter: (P & { key: string })[] = [

@@ -6,6 +6,8 @@ import Hub from './hub/Hub';
 import BookingsApp from './apps/bookings/BookingsApp';
 import InvoicingApp from './apps/invoicing/InvoicingApp';
 import MoneyApp from './apps/money/MoneyApp';
+import ContractsApp from './apps/contracts/ContractsApp';
+import SignHere from './apps/contracts/pages/SignHere';
 import Settings from './settings/Settings';
 
 function Gate() {
@@ -17,6 +19,8 @@ function Gate() {
       <Route path="/bookings/*" element={<BookingsApp />} />
       <Route path="/invoicing/*" element={<InvoicingApp />} />
       <Route path="/money/*" element={<MoneyApp />} />
+      <Route path="/contracts/:id/sign" element={<SignHere />} />
+      <Route path="/contracts/*" element={<ContractsApp />} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
