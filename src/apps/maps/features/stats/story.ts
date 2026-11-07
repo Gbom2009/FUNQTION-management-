@@ -124,7 +124,7 @@ export async function renderStory(stats: SeasonStats, tracks: LonLat[][], lang: 
   ctx.fillText("FEEL THE MUSIQ", W / 2, 1790);
   ctx.fillStyle = WHITE;
   ctx.font = '400 34px "JetBrains Mono"';
-  ctx.fillText("@funqtion1", W / 2, 1850);
+  ctx.fillText("@funqtionofficial", W / 2, 1850);
   ctx.textAlign = "left";
 
   grain(ctx);

@@ -1,4 +1,4 @@
-import { ChevronLeft, Car, FlaskConical, HardDriveDownload, Layers, MessageSquareText, Palette, Volume2, Zap } from "lucide-react";
+import { ChevronLeft, Car, FileInput, FlaskConical, HardDriveDownload, Layers, MessageSquareText, Palette, Volume2, Zap } from "lucide-react";
 import { useApp } from "../../store/app";
 import { useT } from "../../i18n";
 import { useDrive } from "../../store/drive";
@@ -6,6 +6,7 @@ import { useVehicles } from "../../features/vehicles/store";
 import { useVoice } from "../../nav/tts/store";
 import { Section, Segmented, Toggle } from "../../ui/controls";
 import { VehiclesSettings } from "./VehiclesSettings";
+import { ImportFqSettings } from "./ImportFqSettings";
 import { OfflineSettings, PhevSettings } from "./PhevOfflineSettings";
 import { VoiceSettings } from "./VoiceSettings";
 import { GuidanceSettings, MapDisplaySettings } from "./GuidanceSettings";
@@ -70,6 +71,10 @@ export function SettingsMode() {
 
         <Section icon={<HardDriveDownload size={20} />} title={t("offline.title")} summary={t("offline.summary")}>
           <OfflineSettings />
+        </Section>
+
+        <Section icon={<FileInput size={20} />} title={t("import.title")} summary={t("import.summary")}>
+          <ImportFqSettings />
         </Section>
 
         <Section icon={<FlaskConical size={20} />} title={t("settings.developer")}

@@ -299,7 +299,7 @@ Mobile first (iPhone, often one-handed, often in the dark, often with headphones
 - **Tasks** from templates with owners (per phone; the split is agreed and shared via the plan).
 - **Log**: set start/end, overtime requests, issues, damage (→ App 5), vibe, notes, photos.
 - **Wrap-up**: played (App 1), trip km (App 3, from the venue distance), final invoice + overtime line (App 2), thank-you + review message, gear issues (App 5).
-- **Navigation (Maps inside the hub)**: "Route" opens `/maps` with the gig's stops and the trailer; drive time, arrival and km are written to the shared database (§6.1). Requires the Maps merge (`docs/maps/PLAN.md`, steps 1–3) to be done first. Apple/Google Maps as fallback.
+- **Navigation (Maps inside the hub)**: "Route" opens `/maps` with the gig's stops and the trailer; drive time, arrival and km are written to the shared database (§6.1). The Maps merge (`docs/maps/PLAN.md`, steps 1–4) is done (v0.8.0): drive time, buffer and arrival are already in `gigDays`. Apple/Google Maps as fallback.
 - **Reminders via calendar export** (ICS with alarms) per person (§5).
 - **Share the plan** to the other phone: a QR code / file with this one gig day (no full backup needed).
 - Unit tests: timeline generation, shifting, overtime calculation, wrap-up proposals.

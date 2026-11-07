@@ -102,3 +102,54 @@ describe("Maps on the shared database", () => {
     expect((await db.vehicles.get("dj-gear"))?.spec.emptyKg).toBe(220);
   });
 });
+
+describe("one-time FQ-maps import", () => {
+  const fqExport = (gigVenueId: string) => JSON.stringify({
+    "fq-gigs": JSON.stringify({ version: 0, state: {
+      venues: [
+        { id: "venue-a", name: "Zaal Kanters", address: { id: "x", name: "Dorpsstraat 5", detail: "Lieshout", lat: 51.52, lon: 5.6, source: "pdok" }, loadInDoor: { lat: 51.5205, lon: 5.6005 }, contactName: "Henk", photos: [] },
+        { id: "venue-b", name: "Feestboerderij De Linde", address: { id: "y", name: "Lindeweg 1", detail: "Beek en Donk", lat: 51.53, lon: 5.63, source: "pdok" }, photos: [] },
+      ],
+      gigs: [{ id: "gig-1", title: "Bruiloft K&J", venueId: gigVenueId, date: "2026-12-12", loadIn: "16:00", setupBufferMin: 90, trafficMarginPct: 20, route: { seconds: 1500, meters: 18000, fromName: "Thuis", towing: true, computedAt: 1 } }],
+    } }),
+    "fq-trips": JSON.stringify({ version: 0, state: { trips: [
+      { id: "trip-abc", startedAt: Date.parse("2026-10-03T15:00:00"), endedAt: Date.parse("2026-10-03T15:35:00"), km: 21.2, vehicle: "Range Rover Sport P440e", trailer: "DJ gear trailer", gigId: "gig-1", destination: "Zaal Kanters", arrived: true },
+      { id: "trip-sim", startedAt: Date.parse("2026-10-01T10:00:00"), endedAt: Date.parse("2026-10-01T10:10:00"), km: 5, arrived: true, simulated: true },
+    ] } }),
+    "fq-vehicles": JSON.stringify({ version: 2, state: { vehicles: [{ id: "rr-p440e", name: "Range Rover Sport P440e", plate: "XX-123-X" }], trailers: [{ id: "dj-gear", name: "DJ gear trailer", maxMassKg: 750, emptyKg: 230 }] } }),
+  });
+
+  it("matches venues and gigs, fills gaps, imports trips once", async () => {
+    const { db } = await import("../../../../core/db");
+    const { parseFqExport, suggestGig, suggestVenue, applyFqImport } = await import("./importFq");
+    const kanters = await save<SuiteVenue>("venues", { name: "Zaal Kanters", city: "Lieshout" });
+    const gig = await createGig({ ...blankGig("gijs"), title: "Bruiloft Koen & Joyce", date: "2026-12-12", venueId: kanters.id, stage: "confirmed" });
+    const data = parseFqExport(fqExport("venue-a"));
+    const suiteVenues = await db.venues.toArray();
+    const venues = Object.fromEntries(data.venues.map((v) => [v.id, suggestVenue(v, suiteVenues)]));
+    expect(venues).toEqual({ "venue-a": kanters.id, "venue-b": "" });
+    const gigs = Object.fromEntries(data.gigs.map((g) => [g.id, suggestGig(g, [gig], venues)]));
+    expect(gigs).toEqual({ "gig-1": gig.id });
+
+    const r = await applyFqImport({ data, venues, gigs });
+    expect(r).toMatchObject({ venuesNew: 1, venuesUpdated: 1, gigs: 1, trips: 1, simulated: 1, vehicles: 2 });
+    const k = (await db.venues.get(kanters.id))!;
+    expect(k).toMatchObject({ city: "Lieshout", street: "Dorpsstraat 5", contactName: "Henk", loadingEntrance: { lat: 51.5205, lng: 5.6005 } });
+    expect(await db.gigDays.where("gigId").equals(gig.id).first()).toMatchObject({ setupBufferMin: 90, trafficMarginPct: 20, travelMinutes: 25 });
+    expect((await db.gigs.get(gig.id))?.setupTime).toBe("16:00");
+    const trips = (await db.trips.toArray()).filter((t) => !t.deletedAt);
+    expect(trips).toHaveLength(1);
+    expect(trips[0]).toMatchObject({ id: "trip-abc", source: "nav", gigId: gig.id, km: 21.2, purpose: "Bruiloft Koen & Joyce" });
+    expect((await db.vehicles.get("dj-gear"))?.spec.emptyKg).toBe(230);
+
+    // Running it again adds no trips.
+    expect((await applyFqImport({ data, venues: { "venue-a": kanters.id, "venue-b": "skip" }, gigs })).trips).toBe(0);
+    expect((await db.trips.toArray()).length).toBe(1);
+  });
+
+  it("rejects text without FQ-maps data", async () => {
+    const { parseFqExport } = await import("./importFq");
+    expect(() => parseFqExport("{}")).toThrow();
+    expect(() => parseFqExport("not json")).toThrow();
+  });
+});
