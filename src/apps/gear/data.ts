@@ -7,7 +7,7 @@ import {
   type KitRole, type MaintenanceLog, type MaintenancePlan, type MemberId, type PackLine, type PackList, type SafetyTest, type Settings, type WishItem,
 } from '../../core/types';
 import { runTaskSync } from '../bookings/domain/taskSync';
-import { applyScan, defaultSetup, descendants, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, wouldCycle, type ScanOutcome } from './domain/gear';
+import { applyScan, codeMatchesParent, defaultSetup, descendants, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, wouldCycle, type ScanOutcome } from './domain/gear';
 
 const EMPTY: never[] = [];
 export const useGearItems = () => alive(useLiveQuery(() => db.gearItems.toArray(), []) ?? EMPTY) as GearItem[];
@@ -142,8 +142,26 @@ export function blankItem(): ItemDraft {
 }
 
 export async function saveItem(d: ItemDraft): Promise<GearItem> {
-  const code = d.code || nextCode(await db.gearItems.toArray());
+  // New items get a tree code: the case's number + their own number (see domain/gear.ts).
+  const parent = d.parentId ? await db.gearItems.get(d.parentId) : null;
+  const code = d.code || nextCode(alive(await db.gearItems.toArray()), parent);
   return save<GearItem>('gearItems', { ...d, code, locationId: d.locationId ?? d.homeLocationId });
+}
+
+/** If an item's code no longer matches the case it's in, the code a new label would get. */
+export async function suggestedRelabel(itemId: string): Promise<{ item: GearItem; newCode: string } | null> {
+  const item = await db.gearItems.get(itemId);
+  if (!item) return null;
+  const parent = item.parentId ? await db.gearItems.get(item.parentId) : null;
+  if (codeMatchesParent(item, parent)) return null;
+  return { item, newCode: nextCode(alive(await db.gearItems.toArray()), parent) };
+}
+
+/** Give the item a new code for its current case. The old code stays valid as an alias. */
+export async function relabel(itemId: string): Promise<GearItem | null> {
+  const s = await suggestedRelabel(itemId);
+  if (!s) return null;
+  return save<GearItem>('gearItems', { ...s.item, code: s.newCode, aliases: [...new Set([...(s.item.aliases ?? []), s.item.code])] });
 }
 
 export async function addPhoto(itemId: string, file: File, kind: GearPhoto['kind'] = 'main') {
@@ -161,7 +179,10 @@ export async function findByCode(raw: string): Promise<GearItem | undefined> {
   const code = normaliseCode(raw);
   if (!code) return undefined;
   const it = await db.gearItems.where('code').equals(code).first();
-  return it && !it.deletedAt ? it : undefined;
+  if (it && !it.deletedAt) return it;
+  // Old label of a relabelled item.
+  const byAlias = await db.gearItems.filter((i) => !i.deletedAt && !!i.aliases?.includes(code)).first();
+  return byAlias ?? undefined;
 }
 
 async function move(item: GearItem, type: GearMovement['type'], p: { qty?: number; gigId?: string; rentalId?: string; to?: string; status?: GearItem['status']; method?: GearMovement['method']; note?: string; extra?: Partial<GearItem> }) {

@@ -856,7 +856,8 @@ export interface GearLocation extends Base {
 }
 
 export interface GearItem extends Base {
-  code: string;              // FQ-0042, printed under the QR code
+  code: string;              // FQ-01.2-8 (tree code + check character) or an old FQ-0042; printed under the QR code
+  aliases?: string[];        // earlier codes after a relabel: old labels keep scanning
   kind: GearKind;
   name: string;
   category: GearCategory;

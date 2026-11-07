@@ -6,3 +6,7 @@ src-tauri/target
 src-tauri/gen
 *.tsbuildinfo
 public/ocr
+
+# Private data never goes to the (public) repo
+*private*.csv
+*.fqbackup

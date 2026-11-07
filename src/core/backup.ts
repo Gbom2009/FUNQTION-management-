@@ -31,27 +31,73 @@ export async function exportAll(): Promise<BackupFile> {
   return { app: 'funqtion', version: 2, exportedAt: new Date().toISOString(), tables };
 }
 
-export interface MergeResult { inserted: number; updated: number; skipped: number }
+export interface MergeConflict { table: string; key: string; resolution: 'kept_local' | 'took_incoming' | 'renamed' | 'failed' }
+export interface MergeResult { inserted: number; updated: number; skipped: number; conflicts: MergeConflict[] }
+
+// Tables with a unique field besides the id. Two devices can create *different*
+// records with the same value (the same bank line imported on both phones, the
+// same gear code, two pack lists for one gig). IndexedDB would reject the put
+// and abort the whole import, so these are resolved record by record.
+const UNIQUE: Partial<Record<string, string>> = { bankLines: 'hash', vatPeriods: 'key', gearItems: 'code', packLists: 'gigId' };
+
+type Row = Base & Record<string, unknown>;
+
+/** Which of two clashing records to keep. Returns 'incoming', 'local' or 'both' (keep both, rename incoming). */
+function resolveClash(table: string, local: Row, incoming: Row): 'incoming' | 'local' | 'both' {
+  if (table === 'gearItems') return 'both'; // two real items: never drop one, give the incoming a new code
+  if (table === 'bankLines') {
+    // Same transaction: prefer the copy that is already explained (matched/private/…).
+    const done = (r: Row) => r.status !== 'unmatched';
+    if (done(incoming) && !done(local)) return 'incoming';
+    return 'local';
+  }
+  if (table === 'vatPeriods') {
+    if (incoming.filedAt && !local.filedAt) return 'incoming';
+    if (local.filedAt && !incoming.filedAt) return 'local';
+  }
+  return (incoming.updatedAt ?? '') > (local.updatedAt ?? '') ? 'incoming' : 'local';
+}
 
 export async function importMerge(file: BackupFile, blobs: Map<string, Blob> = new Map()): Promise<MergeResult> {
   if (file?.app !== 'funqtion' || !file.tables) throw new Error('invalid_backup');
-  const res: MergeResult = { inserted: 0, updated: 0, skipped: 0 };
+  const res: MergeResult = { inserted: 0, updated: 0, skipped: 0, conflicts: [] };
   await db.transaction('rw', [...DATA_TABLES.map((t) => db.table(t)), db.audit], async () => {
     for (const t of DATA_TABLES) {
-      const rows = (file.tables[t] ?? []) as Base[];
+      const rows = (file.tables[t] ?? []) as Row[];
       const table = db.table(t);
+      const uniq = UNIQUE[t];
       for (const raw of rows) {
         if (!raw?.id) continue;
-        let row = raw as Base & { blob?: Blob };
+        let row = raw;
         if (BLOB_TABLES.has(t)) {
           const blob = blobs.get(row.id);
           if (!blob) { res.skipped++; continue; }
           row = { ...row, blob };
         }
-        const cur = (await table.get(row.id)) as Base | undefined;
-        if (!cur) { await table.put(row); res.inserted++; }
-        else if ((row.updatedAt ?? '') > (cur.updatedAt ?? '')) { await table.put(row); res.updated++; }
-        else res.skipped++;
+        const cur = (await table.get(row.id)) as Row | undefined;
+        if (cur && (row.updatedAt ?? '') <= (cur.updatedAt ?? '')) { res.skipped++; continue; }
+        // Unique-field clash with a *different* local record?
+        const value = uniq ? row[uniq] : undefined;
+        const clash = uniq && value != null ? ((await table.where(uniq).equals(value as string).first()) as Row | undefined) : undefined;
+        if (clash && clash.id !== row.id) {
+          const key = `${uniq}=${String(value)}`;
+          const choice = resolveClash(t, clash, row);
+          if (choice === 'local') { res.conflicts.push({ table: t, key, resolution: 'kept_local' }); res.skipped++; continue; }
+          if (choice === 'incoming') { await table.delete(clash.id); res.conflicts.push({ table: t, key, resolution: 'took_incoming' }); }
+          if (choice === 'both') {
+            // Keep both items; the incoming one gets a temporary code until it is relabelled.
+            row = { ...row, [uniq as string]: `${String(value)}-DUP-${row.id.slice(0, 4).toUpperCase()}` };
+            res.conflicts.push({ table: t, key, resolution: 'renamed' });
+          }
+        }
+        try {
+          await table.put(row);
+          if (cur) res.updated++; else res.inserted++;
+        } catch {
+          // Never let one bad record abort the whole merge.
+          res.conflicts.push({ table: t, key: row.id, resolution: 'failed' });
+          res.skipped++;
+        }
       }
     }
     const audit = (file.tables.audit ?? []) as { id: string }[];
