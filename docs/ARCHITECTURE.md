@@ -34,7 +34,7 @@ src-tauri/         native shell: Windows exe now, iOS/iPadOS later
 The **gig** is the hub record. Future apps hang off `gigId`:
 
 - Invoicing: copies `quote.lines` into an invoice, then sets the gig's `invoicedAt`/`paidAt` (shown in the pipeline).
-- Contracts: created when a gig moves to *Confirmed*.
+- Contracts: generated from the accepted quote; signing moves the gig to *Confirmed* and creates the deposit invoice (see `docs/contracts/PLAN.md`).
 - Gig-day planner: reads `setSlots`, `contacts`, `venue`, `musicWishes`.
 - Gear: packing lists per `eventType`. `setupRequired` and `venue.houseSound` decide what to bring.
 - Navigation: reads `venue` addresses for today's gigs, writes back trips (km) for accounting.

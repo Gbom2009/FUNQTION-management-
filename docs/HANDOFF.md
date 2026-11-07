@@ -22,7 +22,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **Navigation app:** how it's built is unknown (asked twice). Trips use manual km plus a per-venue memory.
 - **Existing gear list** (for investments/assets) and **real price list** not given. The seeded prices (e.g. €150/h DJ set) are placeholders.
 - Items marked ⚖️ in the plans (9% vs 21% VAT for DJ sets, VAT on cancellation fees, deductions) need an accountant **once they register**.
-- Apps 4–8 (contracts, gig-day, gear, portal, navigation link) aren't started. No sync server yet.
+- App 4 (Contracts) has a functional plan in `docs/contracts/PLAN.md` (no code yet; its open questions in §11 need Gijs's answers first). Apps 5–8 (gig-day, gear, portal, navigation link) aren't started. No sync server yet.
 
 ## 3. Conventions in the code
 
