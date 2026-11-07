@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, type Category, type Member, type Package, type Produc
 import { DEFAULT_TEMPLATES } from '../apps/bookings/domain/messaging';
 import { TERMS_EN, TERMS_NL } from '../apps/invoicing/terms';
 import { ensureContractLibrary } from '../apps/contracts/data';
+import { ensureGearSeed } from '../apps/gear/data';
 
 export const DEFAULT_MEMBERS: Member[] = [
   { id: 'gijs', name: 'Gijs', color: '#f68712' },
@@ -24,6 +25,7 @@ export async function ensureSeed() {
     if (!existing.some((e) => e.kind === t.kind && e.language === t.language)) await save<Template>('templates', { ...t }, { actor: 'system' });
   }
   await ensureContractLibrary();
+  await ensureGearSeed();
   if ((await db.products.count()) === 0) {
     type P = Omit<Product, 'id' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>;
     const starter: (P & { key: string })[] = [

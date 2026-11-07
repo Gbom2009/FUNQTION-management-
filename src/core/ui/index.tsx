@@ -22,6 +22,7 @@ const paths: Record<string, string> = {
   phone: 'M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
   nav: 'M3 11l18-8-8 18-2-8z',
   warn: 'M12 3l10 18H2zM12 10v5M12 18h.01',
+  scan: 'M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M7 12h10',
 };
 
 export function Icon({ name, size = 20 }: { name: keyof typeof paths | string; size?: number }) {

@@ -1,4 +1,4 @@
-import type { Assignee, Contract, Enquiry, Gig, Invoice, Payment, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
+import type { Assignee, Contract, Enquiry, GearItem, GearRental, PackList, Gig, Invoice, Payment, Quote, Review, Settings, Task, TaskKind, TemplateKind } from '../../../core/types';
 import { invoiceState } from '../../invoicing/domain/money';
 import { addDays, addMonths, at, parseDate } from '../../../core/dates';
 
@@ -25,7 +25,8 @@ export interface DesiredTask {
 const STALE_DAYS = 60; // never generate tasks that were due more than this long ago
 
 export function desiredTasks(
-  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[]; invoices?: Invoice[]; payments?: Payment[]; contracts?: Contract[] },
+  data: { gigs: Gig[]; enquiries: Enquiry[]; quotes: Quote[]; reviews: Review[]; invoices?: Invoice[]; payments?: Payment[]; contracts?: Contract[];
+    gear?: { items: GearItem[]; lists: PackList[]; rentals: GearRental[] } },
   s: Settings,
   now = new Date(),
 ): DesiredTask[] {
@@ -156,6 +157,27 @@ export function desiredTasks(
         push({ ruleKey: `ct-dep:${c.id}`, kind: 'contract_deposit', assignedTo: g.ownerId, gigId: g.id, invoiceId: dep.id,
           dueAt: c.signedAt ?? c.updatedAt, params: p });
       }
+    }
+  }
+
+  // Gear (app 5): items that did not come back from a gig, and rental return dates.
+  if (data.gear) {
+    const items = new Map(data.gear.items.filter((i) => !i.deletedAt).map((i) => [i.id, i]));
+    for (const list of data.gear.lists) {
+      if (list.deletedAt || list.status !== 'done') continue;
+      const g = gigById.get(list.gigId);
+      for (const l of list.lines) {
+        const it = items.get(l.itemId);
+        if (!l.missing || !it || it.status === 'available' || it.status === 'disposed') continue;
+        if (l.missing === 'broken') continue; // handled as an issue
+        push({ ruleKey: `gear-missing:${list.id}:${l.itemId}`, kind: 'gear_missing', assignedTo: list.phone ?? g?.ownerId ?? 'both', gigId: list.gigId,
+          dueAt: addDays(new Date(list.returnedAt ?? list.updatedAt), 1).toISOString(), params: { code: it.code, name: it.name, title: g?.title ?? '' } });
+      }
+    }
+    for (const r of data.gear.rentals) {
+      if (r.deletedAt || r.returnedAt || !r.until) continue;
+      push({ ruleKey: `gear-return:${r.id}:${r.until}`, kind: 'gear_return', assignedTo: 'both', gigId: r.gigId,
+        dueAt: at(r.until, '10:00').toISOString(), params: { party: r.party, direction: r.direction } });
     }
   }
 

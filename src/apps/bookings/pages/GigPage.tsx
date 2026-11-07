@@ -390,6 +390,7 @@ function GigDocuments({ gig, disabled }: { gig: Gig; disabled: boolean }) {
   const contracts = ((useLiveQuery(() => db.contracts.where('gigId').equals(gig.id).toArray(), [gig.id]) ?? []) as Contract[]).filter((c) => !c.deletedAt);
   return (
     <Section title={t('gig.documents')} actions={<>
+      <Link className="btn small" to={`/gear/gigs/${gig.id}`}>{t('g.packList')}</Link>
       <button className="btn small" disabled={disabled} onClick={async () => {
         const { createContract } = await import('../../contracts/data');
         const c = await createContract(gig.id);

@@ -16,6 +16,8 @@ The Gear app (App 5) will import this file on first start (CSV import, see `PLAN
 | `quantity` | number | `1` for unique items and containers. |
 | `owner` | `gijs` / `coen` / `shared` / `unknown` | Ownership is mixed: some gear is Gijs's, some Coen's, some shared. `unknown` = still to fill in. |
 | `home_location` | `home_gijs` / `home_coen` / `unknown` | Gear lives at both homes. |
+
+The app imports this file with *Gear → Instellingen → Startlijst importeren* (or on the empty Gear home screen). Import is by `code`: existing codes are skipped, so re-importing a longer list only adds the new items.
 | `transport` | `trailer` / `car` | Gigs go by personal car + trailer. Valuable and fragile things (controller, laptop, laser, headphones, USBs) go in the car. |
 | `weight_kg` | number | For the trailer's load total and load order. |
 | `container` | code of a container, or empty | Where it's normally packed. |
@@ -23,7 +25,7 @@ The Gear app (App 5) will import this file on first start (CSV import, see `PLAN
 | `purchase_price_eur`, `replacement_value_eur` | number, e.g. `1249.00` | Replacement value = what it costs new today. |
 | `electrical` | `class1` (earthed plug) / `class2` (double insulated) / `none` | For safety tests later. |
 | `power_w` | number | Power draw, for the power budget per gig. |
-| `kits` | `standard`, `dj_only`, `always` (several: separate with `;`) | `standard` = the usual full set-up; `dj_only` = venues with their own sound and light; `always` = goes to every gig. |
+| `kits` | `standard`, `dj_controller`, `dj_usb`, `dj_light`, `always`, `outdoor` (several: separate with `;`) | `standard` = the usual full set-up. For venues with their own sound it varies per venue: `dj_controller` = controller only, `dj_usb` = only USB sticks (+ headphones), `dj_light` = controller + a bit of light. `always` = goes to every gig. In the app you pick the set-up per gig. |
 | `notes` | text | Rows still marked `TEMP placeholder` have not been checked against the real gear. |
 
 ## For Claude (when updating)

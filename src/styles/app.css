@@ -330,3 +330,52 @@ body:has(.savebar) .fab { display: none; }
 .signhere-btn { min-height: 56px; font-size: 18px; }
 .signhere-done { display: grid; gap: var(--s4); justify-items: center; text-align: center; padding-top: 15vh; }
 .signhere .card .check { margin-bottom: var(--s2); align-items: flex-start; }
+
+/* ---- App 5: Gear & Inventory ---------------------------------------------
+   Built for a dark venue or next to a trailer at 02:00: big targets, big
+   counters, and a night mode that dims everything without white flashes. */
+.mono { font-family: var(--fq-font-mono); font-variant-numeric: tabular-nums; }
+.danger-text { color: var(--danger); }
+.big-text { font-size: 18px; }
+.scanner { display: grid; gap: var(--s2); }
+.scanner-view { position: relative; background: #000; aspect-ratio: 4 / 3; max-height: 55vh; overflow: hidden; border: 1px solid var(--fq-rule-color); }
+.scanner.compact .scanner-view { aspect-ratio: 16 / 9; max-height: 32vh; }
+.scanner-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanner-frame { position: absolute; inset: 18%; border: 2px solid var(--fq-accent); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35); pointer-events: none; }
+.scanner-bar .input { min-height: var(--touch, 48px); font-size: 18px; }
+.scan-last { margin-top: var(--s2); padding: var(--s3) var(--s4); font-size: 18px; border-left: 4px solid currentColor; background: var(--fq-surface-raised); }
+.scan-last.ok { color: var(--ok); }
+.scan-last.bad { color: var(--danger); }
+.pack-counter { font-family: var(--fq-font-display); font-size: clamp(2rem, 1.5rem + 3vw, 3.25rem); line-height: 1; color: var(--fq-text-strong); white-space: nowrap; }
+.pack-counter span { color: var(--fq-accent); }
+.pack-lines { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; background: var(--fq-rule-color); border: 1px solid var(--fq-rule-color); }
+.pack-line { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); background: var(--fq-surface-raised); min-height: 60px; min-width: 0; }
+.pack-line > * { flex-shrink: 0; }
+.pack-line > .grow { flex-shrink: 1; min-width: 0; }
+.pack-line.done { opacity: 0.55; }
+.pack-line.done .pack-name { text-decoration: line-through; }
+.pack-line.blocked { box-shadow: inset 4px 0 0 var(--danger); }
+.pack-name { font-size: 17px; color: var(--fq-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pack-tick { flex: none; width: 52px; height: 52px; border: 2px solid var(--fq-text-dim); background: transparent; color: var(--ok); font-size: 28px; cursor: pointer; display: grid; place-items: center; }
+.pack-tick[aria-pressed='true'] { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.pack-tick.static { border: 0; width: 36px; color: var(--fq-text-dim); font-size: 14px; cursor: default; }
+.pack-live .section { margin-bottom: var(--s3); }
+.missing-row { border: 1px solid var(--danger); padding: var(--s3); display: grid; gap: var(--s2); }
+.thumb { width: 44px; height: 44px; object-fit: cover; flex: none; background: var(--fq-surface-inset); }
+.thumb.empty { display: inline-block; border: 1px dashed var(--fq-rule-color); }
+.photo-row { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.photo-cell { position: relative; width: 120px; height: 120px; border: 1px solid var(--fq-rule-color); display: grid; place-items: center; cursor: pointer; color: var(--fq-text-dim); }
+.photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+.photo-cell .btn { position: absolute; top: 4px; right: 4px; }
+.scan-card .btn, .scan-card select { min-height: 48px; }
+/* Night mode: dim, warm, no bright whites (keeps your eyes used to the dark). */
+body.night .main { filter: brightness(0.6) sepia(0.5) saturate(1.3) hue-rotate(-15deg); }
+body.night .scanner-view { filter: none; }
+@media print {
+  .sidebar, .bottom-nav, .fab, .mobile-top, .tabs, .savebar, .scanner, .btn { display: none !important; }
+  .main { padding: 0 !important; }
+  .pack-line { min-height: 0; padding: 2px 4px; background: #fff; color: #000; }
+  .pack-tick { width: 18px; height: 18px; border: 1px solid #000; font-size: 12px; }
+  .pack-name { color: #000; font-size: 12px; }
+  body { background: #fff; color: #000; }
+}

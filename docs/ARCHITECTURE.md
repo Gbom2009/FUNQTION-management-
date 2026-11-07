@@ -77,6 +77,13 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - PDFs: `domain/pdfDoc.ts` (pdfmake, same paper style as App 2) with rider and terms annexes and a signature certificate page; the content hash is printed in every footer.
 - Reminders: contract review, signature reminders (r1 after N days, r2 the day before the sign-by date), sign-by expired and "send deposit invoice" come from the shared reminder engine.
 
+## App 5: Gear & Inventory (local mode)
+
+- Lives in `src/apps/gear/`; adds the Dexie version 5 tables `gearItems`, `gearPhotos` (Blobs, in the backup ZIP under `gear/`), `gearLocations`, `gearKits`, `packLists`, `gearMovements`, `gearIssues`, `maintenancePlans`, `maintenanceLogs`, `safetyTests`, `gearRentals` and `wishlist`. Products (App 2) get an optional `kitIds`.
+- `domain/gear.ts` is pure and tested: codes (`FQ-0042`), packing-list generation (set-up kit + kits of sold products + outdoor + always), scan application (containers tick off their contents, broken gear is blocked), reservation windows and conflicts (unique and counted items), trailer load, maintenance/safety due dates, insurance totals, and the CSV format of `docs/gear-inventory/gear-list.csv` (imported on demand, idempotent by code).
+- Scanning: `components.tsx → Scanner` uses `getUserMedia` + `BarcodeDetector` where available, else `jsqr` (iPhone Safari); always a typed-code fallback. Labels and the insurance list are pdfmake definitions in `domain/pdfDocs.ts` (pdfmake's built-in `qr`).
+- One gig phone per gig (no sync yet). Usage hours go up at check-in from the gig's set times. Repairs and rented-in gear create App 3 expenses (`missing_receipt`). Missing items and rental returns become tasks in the shared reminder engine.
+
 ## Business rules (agreed)
 
 - **VAT:** not registered → documents show no VAT and the note "Er wordt geen btw in rekening gebracht". Switch to KOR or VAT mode in Quotes & Invoices → Settings after registering.

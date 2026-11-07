@@ -1,26 +1,26 @@
 code,kind,name,category,brand,model,serial,quantity,owner,home_location,container,transport,weight_kg,purchase_date,purchase_price_eur,replacement_value_eur,electrical,power_w,kits,notes
-FQ-0001,unique,All-in-one DJ-controller,decks,,,,1,unknown,unknown,,car,,,,,class1,,standard;dj_only,Standaard set (bevestigd); merk/model nog invullen
-FQ-0002,unique,Lichtbar (licht + laser),lighting,,,,1,unknown,unknown,,trailer,,,,,class1,,standard,Standaard set (bevestigd); welke lampen erop nog invullen
+FQ-0001,unique,All-in-one DJ-controller,decks,,,,1,unknown,unknown,,car,,,,,class1,,standard;dj_controller;dj_light,Standaard set (bevestigd); merk/model nog invullen
+FQ-0002,unique,Lichtbar (licht + laser),lighting,,,,1,unknown,unknown,,trailer,,,,,class1,,standard;dj_light,Standaard set (bevestigd); welke lampen erop nog invullen
 FQ-0003,unique,Laser,lasers,Laserworld,DS-1000 Mark III,,1,gijs,home_gijs,,car,,,,,class1,,standard,Standaard set (bevestigd); laserklasse 4; gemonteerd op de lichtbar
 FQ-0004,unique,Topspeaker links,speakers,,,,1,unknown,unknown,,trailer,,,,,class1,,standard,Standaard set (bevestigd)
 FQ-0005,unique,Topspeaker rechts,speakers,,,,1,unknown,unknown,,trailer,,,,,class1,,standard,Standaard set (bevestigd)
 FQ-0006,unique,Subwoofer,subs,,,,1,unknown,unknown,,trailer,,,,,class1,,standard,Standaard set (bevestigd)
 FQ-0007,unique,DJ-booth,furniture,,,,1,unknown,unknown,,trailer,,,,,none,,standard,Standaard set (bevestigd)
 FQ-0008,container,Licht- en geluidsrack,cases,,,,1,unknown,unknown,,trailer,,,,,class1,,standard,Standaard set (bevestigd); inhoud nog invullen (versterker? stroomverdeling? DMX?)
-FQ-0010,unique,Laptop,laptops,,,,1,unknown,unknown,,car,,,,,class2,,dj_only,TEMP placeholder: alleen als de controller een laptop nodig heeft
-FQ-0011,unique,Koptelefoon Gijs,headphones,,,,1,gijs,home_gijs,,car,,,,,none,,standard;dj_only,TEMP placeholder
-FQ-0012,unique,Koptelefoon Coen,headphones,,,,1,coen,home_coen,,car,,,,,none,,standard;dj_only,TEMP placeholder
+FQ-0010,unique,Laptop,laptops,,,,1,unknown,unknown,,car,,,,,class2,,standard;dj_controller;dj_light,TEMP placeholder: alleen als de controller een laptop nodig heeft
+FQ-0011,unique,Koptelefoon Gijs,headphones,,,,1,gijs,home_gijs,,car,,,,,none,,standard;dj_controller;dj_usb;dj_light,TEMP placeholder
+FQ-0012,unique,Koptelefoon Coen,headphones,,,,1,coen,home_coen,,car,,,,,none,,standard;dj_controller;dj_usb;dj_light,TEMP placeholder
 FQ-0013,unique,Microfoon,headphones,,,,1,unknown,unknown,FQ-0103,trailer,,,,,none,,standard,TEMP placeholder
 FQ-0020,unique,Speakerpaal links (top op sub),stands,,,,1,unknown,unknown,,trailer,,,,,none,,standard,TEMP placeholder
 FQ-0021,unique,Speakerstatief rechts,stands,,,,1,unknown,unknown,,trailer,,,,,none,,standard,TEMP placeholder
-FQ-0022,unique,Statief voor lichtbar,stands,,,,1,unknown,unknown,,trailer,,,,,none,,standard,TEMP placeholder
+FQ-0022,unique,Statief voor lichtbar,stands,,,,1,unknown,unknown,,trailer,,,,,none,,standard;dj_light,TEMP placeholder
 FQ-0040,counted,XLR-kabel 10 m,audio_cables,,,,4,shared,unknown,FQ-0103,trailer,,,,,none,,standard,TEMP placeholder
-FQ-0041,counted,XLR-kabel 3 m,audio_cables,,,,4,shared,unknown,FQ-0103,trailer,,,,,none,,standard;dj_only,TEMP placeholder
+FQ-0041,counted,XLR-kabel 3 m,audio_cables,,,,4,shared,unknown,FQ-0103,trailer,,,,,none,,standard;dj_controller;dj_light,TEMP placeholder
 FQ-0042,counted,Stroomkabel (IEC / powerCON),power,,,,6,shared,unknown,FQ-0103,trailer,,,,,class1,,standard,TEMP placeholder
 FQ-0043,counted,Verlengkabel 230 V 10 m,power,,,,2,shared,unknown,FQ-0103,trailer,,,,,class1,,always,TEMP placeholder
 FQ-0044,counted,Stekkerdoos,power,,,,2,shared,unknown,FQ-0103,trailer,,,,,class1,,always,TEMP placeholder
 FQ-0045,counted,DMX-kabel,dmx,,,,2,shared,unknown,FQ-0103,trailer,,,,,none,,standard,TEMP placeholder
-FQ-0046,counted,USB-stick met muziek,laptops,,,,4,shared,unknown,,car,,,,,none,,standard;dj_only,TEMP placeholder
+FQ-0046,counted,USB-stick met muziek,laptops,,,,4,shared,unknown,,car,,,,,none,,standard;dj_controller;dj_usb;dj_light,TEMP placeholder
 FQ-0050,counted,Gaffa tape,tools,,,,2,shared,unknown,FQ-0103,trailer,,,,,none,,always,TEMP placeholder
 FQ-0051,counted,Kabelbinders (zak),tools,,,,1,shared,unknown,FQ-0103,trailer,,,,,none,,always,TEMP placeholder
 FQ-0052,counted,Reservezekeringen (set),tools,,,,1,shared,unknown,FQ-0103,trailer,,,,,none,,always,TEMP placeholder
