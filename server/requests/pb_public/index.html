@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#040404">
+<title>Team Funqtion · Verzoekjes</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <img src="logo.svg" alt="Team Funqtion" class="logo">
+  <div>
+    <div class="tag">FEEL THE MUSIQ</div>
+    <h1 id="title">Team Funqtion</h1>
+  </div>
+</header>
+<main>
+  <div id="paused" class="banner" hidden></div>
+  <div id="now" class="now" hidden><span class="lbl" data-t="now"></span><span id="nowText"></span></div>
+  <div id="wedding" class="wedding" hidden></div>
+
+  <section>
+    <h2 data-t="ask"></h2>
+    <input id="q" type="search" autocomplete="off" enterkeyhint="search">
+    <div id="results" class="list"></div>
+    <details id="extra">
+      <summary data-t="more"></summary>
+      <label><span data-t="shout"></span><input id="shout" maxlength="200"></label>
+      <label><span data-t="name"></span><input id="name" maxlength="40"></label>
+      <label><span data-t="prio"></span><input id="prio" maxlength="20" autocapitalize="characters"></label>
+      <p class="small" data-t="shoutHint"></p>
+    </details>
+  </section>
+
+  <section>
+    <h2 data-t="top"></h2>
+    <div id="top" class="list"></div>
+  </section>
+
+  <section id="mineBox" hidden>
+    <h2 data-t="mine"></h2>
+    <div id="mine" class="list"></div>
+  </section>
+</main>
+<footer>
+  <a href="https://instagram.com/funqtionofficial" rel="noopener">@funqtionofficial</a> ·
+  <a href="privacy.html" data-t="privacy"></a>
+</footer>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

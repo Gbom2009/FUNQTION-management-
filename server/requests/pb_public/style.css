@@ -1,0 +1,46 @@
+@font-face { font-family: 'Archivo Black'; src: url(archivo-black.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(jetbrains-mono.woff2) format('woff2'); font-display: swap; }
+:root { --bg: #040404; --card: #141414; --line: #363636; --text: #d9d9d9; --strong: #f0f0f0; --dim: #8d8d8d; --orange: #f68712; --ok: #4fd17a; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 300 16px/1.45 'JetBrains Mono', ui-monospace, monospace; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+.top { display: flex; align-items: center; gap: 14px; padding: 18px 16px 12px; border-bottom: 1px solid var(--line); }
+.logo { width: 52px; height: 52px; }
+.tag { color: var(--orange); font-size: 11px; letter-spacing: .25em; }
+h1 { margin: 2px 0 0; font: 400 22px/1.1 'Archivo Black', 'Arial Black', sans-serif; color: var(--strong); text-transform: uppercase; letter-spacing: -.02em; }
+h2 { font: 400 13px/1 'JetBrains Mono', monospace; color: var(--dim); text-transform: uppercase; letter-spacing: .15em; margin: 26px 0 10px; }
+main { padding: 0 16px 40px; max-width: 640px; margin: 0 auto; }
+input { width: 100%; min-height: 52px; padding: 0 14px; background: var(--card); border: 1px solid var(--line); color: var(--strong); font: inherit; font-size: 17px; border-radius: 0; }
+input:focus { outline: 2px solid var(--orange); outline-offset: 0; }
+label { display: block; margin-top: 10px; font-size: 13px; color: var(--dim); }
+label input { margin-top: 4px; min-height: 46px; }
+details { margin-top: 12px; }
+summary { color: var(--dim); font-size: 14px; cursor: pointer; min-height: 32px; }
+.list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 10px; background: var(--card); border: 1px solid var(--line); }
+.row img { width: 44px; height: 44px; flex: none; }
+.row .t { flex: 1; min-width: 0; }
+.row .t b { display: block; color: var(--strong); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .t span { display: block; font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .shout { display: block; font-size: 13px; color: var(--orange); white-space: normal; }
+button { font: inherit; cursor: pointer; }
+.ask { min-height: 44px; padding: 0 14px; background: var(--orange); color: #040404; border: 0; text-transform: uppercase; font-size: 13px; letter-spacing: .05em; flex: none; }
+.vote { width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--orange); color: var(--orange); flex: none; }
+.vote b { font-size: 20px; line-height: 1; }
+.vote span { font-size: 12px; }
+.vote[disabled] { border-color: var(--line); color: var(--dim); }
+.vote.pop { animation: pop .35s ease-out; }
+@keyframes pop { 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .vote.pop { animation: none; } }
+.badge { font-size: 12px; color: var(--dim); }
+.badge.played { color: var(--ok); }
+.banner { margin-top: 16px; padding: 14px; border: 1px solid var(--orange); color: var(--strong); }
+.now { margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--orange); background: var(--card); }
+.now .lbl { display: block; font-size: 11px; letter-spacing: .2em; color: var(--orange); text-transform: uppercase; }
+.wedding { margin-top: 16px; padding: 14px; border: 1px solid var(--line); }
+.wedding b { font-family: 'Archivo Black', sans-serif; color: var(--strong); text-transform: uppercase; }
+.small { font-size: 12px; color: var(--dim); }
+.empty { color: var(--dim); font-size: 14px; padding: 8px 0; }
+footer { text-align: center; padding: 20px 16px 30px; font-size: 13px; color: var(--dim); border-top: 1px solid var(--line); }
+footer a { color: var(--dim); }
+.toast { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 600px; margin: 0 auto; padding: 14px; background: var(--strong); color: #040404; text-align: center; }

@@ -1,0 +1,1 @@
+{ "type": "commonjs", "private": true, "description": "PocketBase hooks for Funqtion Requests (CommonJS for the tests; PocketBase ignores this file)" }
