@@ -29,6 +29,6 @@ export const usePhev = create<PhevState>()(
       chargerConnector: "any",
       set: (p) => set(p),
     }),
-    { name: "fq-phev", storage: lazyStorage },
+    { name: "fq-maps-phev", storage: lazyStorage },
   ),
 );

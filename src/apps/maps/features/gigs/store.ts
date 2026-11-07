@@ -1,7 +1,10 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { lazyStorage } from "../../store/storage";
 import type { Place } from "../../nav/geocode";
+import { save, uid } from "../../../../core/repo";
+import type { Venue as SuiteVenue } from "../../../../core/types";
+import { gigChanges, gigDayId, venueChanges } from "../shared/mapping";
+import { queueWrite } from "../shared/writer";
+import { suiteVenue, syncPhotos } from "../shared/sync";
 
 export interface Pin { lat: number; lon: number }
 
@@ -16,7 +19,7 @@ export interface Venue {
   contactName?: string;
   contactPhone?: string;
   notes?: string;
-  /** small JPEG data URLs (resized on import) */
+  /** photo URLs (suite venuePhotos); new ones arrive as small JPEG data URLs */
   photos: string[];
 }
 
@@ -38,7 +41,9 @@ export interface Gig {
 export type PinField = "loadInDoor" | "trailerParking";
 
 interface GigState {
+  /** Suite venues (App 1) as Maps venues. Filled by features/shared/sync.ts. */
   venues: Venue[];
+  /** Suite gigs (App 1 + Gig Day) as Maps gigs. Created and renamed in Bookings, not here. */
   gigs: Gig[];
   /** map pin-picking: the next map tap sets this venue field */
   picking: { venueId: string; field: PinField } | null;
@@ -48,57 +53,49 @@ interface GigState {
 
   addVenue: (v?: Partial<Venue>) => string;
   updateVenue: (id: string, p: Partial<Venue>) => void;
-  removeVenue: (id: string) => void;
-  addGig: (g?: Partial<Gig>) => string;
+  /** load-in time, set-up buffer, traffic margin and the computed route */
   updateGig: (id: string, p: Partial<Gig>) => void;
-  removeGig: (id: string) => void;
   startPicking: (venueId: string, field: PinField) => void;
   finishPicking: (pin: Pin | null) => void;
 }
 
-const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+// Gigs and venues are the suite's (one source, entered once). Device-only
+// state (picking, focus) stays here; every edit goes to the shared database.
+export const useGigs = create<GigState>()((set, get) => ({
+  venues: [],
+  gigs: [],
+  picking: null,
+  focusVenueId: null,
+  setFocusVenue: (focusVenueId) => set({ focusVenueId }),
 
-function todayIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-export const useGigs = create<GigState>()(
-  persist(
-    (set, get) => ({
-      venues: [],
-      gigs: [],
-      picking: null,
-      focusVenueId: null,
-      setFocusVenue: (focusVenueId) => set({ focusVenueId }),
-
-      addVenue: (v) => {
-        const id = uid("venue");
-        set({ venues: [...get().venues, { id, name: v?.name ?? "Nieuwe venue", photos: [], ...v }] });
-        return id;
-      },
-      updateVenue: (id, p) => set({ venues: get().venues.map((v) => (v.id === id ? { ...v, ...p } : v)) }),
-      removeVenue: (id) => set({
-        venues: get().venues.filter((v) => v.id !== id),
-        gigs: get().gigs.map((g) => (g.venueId === id ? { ...g, venueId: undefined } : g)),
-      }),
-      addGig: (g) => {
-        const id = uid("gig");
-        set({ gigs: [...get().gigs, { id, title: "Gig", date: todayIso(), loadIn: "18:00", setupBufferMin: 60, trafficMarginPct: 15, ...g }] });
-        return id;
-      },
-      updateGig: (id, p) => set({ gigs: get().gigs.map((g) => (g.id === id ? { ...g, ...p } : g)) }),
-      removeGig: (id) => set({ gigs: get().gigs.filter((g) => g.id !== id) }),
-      startPicking: (venueId, field) => set({ picking: { venueId, field } }),
-      finishPicking: (pin) => {
-        const p = get().picking;
-        if (p && pin) get().updateVenue(p.venueId, { [p.field]: pin });
-        set({ picking: null });
-      },
-    }),
-    { name: "fq-gigs", storage: lazyStorage, partialize: ({ venues, gigs }) => ({ venues, gigs }) },
-  ),
-);
+  addVenue: (v) => {
+    const id = uid();
+    const venue: Venue = { id, name: v?.name ?? "Nieuwe venue", photos: [], ...v };
+    set({ venues: [...get().venues, venue] });
+    void save<SuiteVenue>("venues", { id, name: venue.name, ...venueChanges(v ?? {}) });
+    return id;
+  },
+  updateVenue: (id, p) => {
+    const before = get().venues.find((v) => v.id === id);
+    set({ venues: get().venues.map((v) => (v.id === id ? { ...v, ...p } : v)) });
+    if (p.photos && before) void syncPhotos(id, before.photos, p.photos);
+    const { photos: _p, ...rest } = p;
+    const changes = venueChanges(rest, suiteVenue(id));
+    if (Object.keys(changes).length) queueWrite("venues", id, changes);
+  },
+  updateGig: (id, p) => {
+    set({ gigs: get().gigs.map((g) => (g.id === id ? { ...g, ...p } : g)) });
+    const { gig, day } = gigChanges(p);
+    if (Object.keys(gig).length) queueWrite("gigs", id, gig);
+    if (Object.keys(day).length) queueWrite("gigDays", gigDayId(id), day, { gigId: id });
+  },
+  startPicking: (venueId, field) => set({ picking: { venueId, field } }),
+  finishPicking: (pin) => {
+    const p = get().picking;
+    if (p && pin) get().updateVenue(p.venueId, { [p.field]: pin });
+    set({ picking: null });
+  },
+}));
 
 /** Where to route to for a venue: load-in door if set, else the address. */
 export function venueTarget(v: Venue): Pin | undefined {

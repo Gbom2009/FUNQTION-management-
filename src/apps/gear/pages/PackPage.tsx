@@ -10,6 +10,7 @@ import { nowIso } from '../../../core/repo';
 import type { GearItem, KitRole, MemberId, PackLine, PackList } from '../../../core/types';
 import {
   addLine, allConflicts, finishLoading, finishReturn, getOrCreatePackList, regenerate, savePackList, scanInto, useGearItems, useGearLocations, type MissingAction,
+  useTrailerWeights,
 } from '../data';
 import { Scanner, StatusPill, feedback, useNightMode } from '../components';
 import { loadByTransport, progress, trailerPayload, treeLines, type GearConflict, codeProblem } from '../domain/gear';
@@ -43,7 +44,8 @@ export default function PackPage() {
   const phase = mode === 'back' ? 'back' : 'out';
   const prog = progress(list.lines, phase);
   const load = loadByTransport(list.lines, items);
-  const payload = trailerPayload(settings);
+  const tw = useTrailerWeights(settings);
+  const payload = trailerPayload(tw);
   const hasLaser = list.lines.some((l) => byId.get(l.itemId)?.category === 'lasers');
   const save = (p: Partial<PackList>) => savePackList({ ...list, ...p });
   const setLine = (id: string, p: Partial<PackLine>) => save({ lines: list.lines.map((l) => (l.id === id ? { ...l, ...p } : l)) });
@@ -169,7 +171,7 @@ export default function PackPage() {
               <dt>{t('g.inCar')}</dt><dd>{load.carKg} kg</dd>
               {load.unknownWeight > 0 && <><dt>{t('g.noWeight')}</dt><dd>{load.unknownWeight}</dd></>}
             </dl>
-            <p className="tiny muted">{settings.gearTrailerEmptyKg ? t('g.payloadHint', { max: settings.gearTrailerMaxKg, empty: settings.gearTrailerEmptyKg }) : t('g.payloadUnknown', { max: settings.gearTrailerMaxKg })}</p>
+            <p className="tiny muted">{tw.gearTrailerEmptyKg ? t('g.payloadHint', { max: tw.gearTrailerMaxKg, empty: tw.gearTrailerEmptyKg }) : t('g.payloadUnknown', { max: tw.gearTrailerMaxKg })}</p>
           </Section>
         </div>
       </div>

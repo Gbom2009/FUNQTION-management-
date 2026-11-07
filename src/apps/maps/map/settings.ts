@@ -46,6 +46,6 @@ export const useMapSettings = create<MapSettings>()(
       bannerSize: "normal",
       set: (p) => set(p),
     }),
-    { name: "fq-map-settings", storage: lazyStorage },
+    { name: "fq-maps-map-settings", storage: lazyStorage },
   ),
 );

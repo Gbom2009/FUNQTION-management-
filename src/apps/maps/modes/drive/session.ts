@@ -14,6 +14,9 @@ import { towCapFor } from "../../features/vehicles/profiles";
 import type { TowProfile } from "../../features/vehicles/store";
 import { computeTowWarnings, fetchHeights, type TowWarning } from "../../features/vehicles/towWarnings";
 import { recordTrip } from "../../features/stats/tripLog";
+import { useGigs } from "../../features/gigs/store";
+import { queueWrite } from "../../features/shared/writer";
+import { gigDayId } from "../../features/shared/mapping";
 import { createDecimator, saveTrack } from "../../features/stats/tracks";
 import { activeVehicle } from "../../features/vehicles/store";
 import { haversine } from "../../nav/geo";
@@ -300,10 +303,12 @@ function trackTrip(f: Fix) {
 function finishTrip(arrived: boolean) {
   const a = usePlan.getState().active;
   if (!trip || !a || trip.km < 0.2) { trip = null; return; }
+  const car = a.tow?.vehicle ?? activeVehicle();
   const id = recordTrip({
     startedAt: trip.startedAt, endedAt: Date.now(), km: Math.round(trip.km * 10) / 10,
-    vehicle: a.tow?.vehicle.name ?? activeVehicle()?.name, trailer: a.tow?.trailer.name,
-    gigId: a.gigId, destination: a.stops[a.stops.length - 1]?.name, arrived,
+    vehicle: car?.name, trailer: a.tow?.trailer.name, vehicleId: car?.id, trailerId: a.tow?.trailer.id,
+    gigId: a.gigId, gigTitle: a.gigId ? useGigs.getState().gigs.find((g) => g.id === a.gigId)?.title : undefined,
+    destination: a.stops[a.stops.length - 1]?.name, arrived,
     simulated: provider?.kind === "simulated",
   });
   void saveTrack(id, trip.track.points());
@@ -352,6 +357,9 @@ function onFix(f: Fix) {
 
   if (g.arrived) {
     d.set({ arrived: true });
+    // Real arrival at a gig → the gig day (Gig Day's log reads it).
+    const gigId = usePlan.getState().active?.gigId;
+    if (gigId && provider?.kind !== "simulated") queueWrite("gigDays", gigDayId(gigId), { arrivedAt: new Date().toISOString() }, { gigId });
     finishTrip(true);
     setTimeout(() => { if (sim) sim.paused = true; }, 3000);
     return;

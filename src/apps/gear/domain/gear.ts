@@ -337,6 +337,24 @@ export function loadByTransport(lines: PackLine[], items: Pick<GearItem, 'id' | 
 /** Payload of the trailer: maximum mass minus its own weight (when known). */
 export const trailerPayload = (s: Pick<Settings, 'gearTrailerMaxKg' | 'gearTrailerEmptyKg'>) => s.gearTrailerMaxKg - (s.gearTrailerEmptyKg ?? 0);
 
+/**
+ * Trailer weights: from the DJ gear trailer in Navigatie (shared vehicles) when
+ * it has them, else from Gear's own settings.
+ */
+export function trailerWeights(
+  s: Pick<Settings, 'gearTrailerMaxKg' | 'gearTrailerEmptyKg'>,
+  trailer?: { deletedAt?: string | null; spec: Record<string, unknown> },
+): Pick<Settings, 'gearTrailerMaxKg' | 'gearTrailerEmptyKg'> & { fromMaps: boolean } {
+  const num = (v: unknown) => (typeof v === 'number' && v > 0 ? v : undefined);
+  const max = trailer && !trailer.deletedAt ? num(trailer.spec.maxMassKg) : undefined;
+  const empty = trailer && !trailer.deletedAt ? num(trailer.spec.emptyKg) : undefined;
+  return {
+    gearTrailerMaxKg: max ?? s.gearTrailerMaxKg,
+    gearTrailerEmptyKg: max ? empty : s.gearTrailerEmptyKg,
+    fromMaps: !!max,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Maintenance and safety tests
 

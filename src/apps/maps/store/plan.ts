@@ -133,7 +133,7 @@ export const usePlan = create<PlanState>()(
       },
     }),
     {
-      name: "fq-plan", storage: lazyStorage,
+      name: "fq-maps-plan", storage: lazyStorage,
       // routes are cached separately; recompute on load
       partialize: ({ stops, options, active, planningGigId }) => ({ stops, options, active, planningGigId }),
       onRehydrateStorage: () => (s) => { if (s && s.stops.length >= 2) void s.compute(); },

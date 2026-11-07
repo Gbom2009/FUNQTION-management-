@@ -31,6 +31,6 @@ export const useApp = create<AppState>()(
       setTheme: (theme) => set({ theme }),
       setAutoTheme: (autoTheme) => set({ autoTheme }),
     }),
-    { name: "fq-app", storage: lazyStorage, partialize: ({ lang, theme, autoTheme }) => ({ lang, theme, autoTheme }) },
+    { name: "fq-maps-app", storage: lazyStorage, partialize: ({ lang, theme, autoTheme }) => ({ lang, theme, autoTheme }) },
   ),
 );

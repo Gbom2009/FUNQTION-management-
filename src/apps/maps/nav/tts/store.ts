@@ -48,7 +48,7 @@ export const useVoice = create<VoiceState>()(
       set: (p) => set(p),
     }),
     {
-      name: "fq-voice", storage: lazyStorage,
+      name: "fq-maps-voice", storage: lazyStorage,
       partialize: ({ engine, piperVoice, systemVoice, rate, volume, downloaded }) => ({ engine, piperVoice, systemVoice, rate, volume, downloaded }),
     },
   ),

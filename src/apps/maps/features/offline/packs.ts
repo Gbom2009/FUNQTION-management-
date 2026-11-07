@@ -39,7 +39,7 @@ export const useOffline = create<OfflineState>()(
       set: (p) => set(p),
       _setPacks: (packs) => set({ packs }),
     }),
-    { name: "fq-offline", storage: lazyStorage },
+    { name: "fq-maps-offline", storage: lazyStorage },
   ),
 );
 

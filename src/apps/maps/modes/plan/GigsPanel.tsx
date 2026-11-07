@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useGigs, type Gig } from "../../features/gigs/store";
 import { leaveBy, urgency } from "../../features/gigs/leaveBy";
 import { computeGigRoute, planGig } from "../../features/gigs/gigRoute";
@@ -14,9 +15,9 @@ const label = "fq-label";
 function GigCard({ gig, onPlanned }: { gig: Gig; onPlanned: () => void }) {
   const t = useT();
   const lang = useApp((s) => s.lang);
-  const { venues, updateGig, removeGig } = useGigs();
+  const { venues, updateGig } = useGigs();
   const venue = venues.find((v) => v.id === gig.venueId);
-  const [edit, setEdit] = useState(!gig.venueId);
+  const [edit, setEdit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [, tick] = useState(0);
@@ -70,20 +71,7 @@ function GigCard({ gig, onPlanned }: { gig: Gig; onPlanned: () => void }) {
 
       {edit && (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <label className="col-span-2">
-            <span className={label}>{t("gig.title")}</span>
-            <input className={field} value={gig.title} onChange={(e) => updateGig(gig.id, { title: e.target.value })} />
-          </label>
-          <label className="col-span-2">
-            <span className={label}>{t("gig.venue")}</span>
-            <select className={field} value={gig.venueId ?? ""} onChange={(e) => updateGig(gig.id, { venueId: e.target.value || undefined, route: undefined })}>
-              <option value="">—</option>
-              {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </label>
-          <label><span className={label}>{t("gig.date")}</span>
-            <input type="date" className={field} value={gig.date} onChange={(e) => updateGig(gig.id, { date: e.target.value })} /></label>
-          <label><span className={label}>{t("gig.loadIn")}</span>
+          <label className="col-span-2"><span className={label}>{t("gig.loadIn")}</span>
             <input type="time" className={field} value={gig.loadIn} onChange={(e) => updateGig(gig.id, { loadIn: e.target.value })} /></label>
           <label><span className={label}>{t("gig.setup")} (min)</span>
             <input type="number" min={0} step={15} className={field} value={gig.setupBufferMin}
@@ -91,9 +79,7 @@ function GigCard({ gig, onPlanned }: { gig: Gig; onPlanned: () => void }) {
           <label><span className={label}>{t("gig.traffic")} (%)</span>
             <input type="number" min={0} max={100} step={5} className={field} value={gig.trafficMarginPct}
               onChange={(e) => updateGig(gig.id, { trafficMarginPct: Number(e.target.value) || 0 })} /></label>
-          <label className="col-span-2"><span className={label}>{t("gig.notes")}</span>
-            <textarea rows={2} className={field} value={gig.notes ?? ""} onChange={(e) => updateGig(gig.id, { notes: e.target.value })} /></label>
-          <button onClick={() => removeGig(gig.id)} className="col-span-2 h-9 text-[12px] text-fq-muted hover:text-fq-danger">{t("gig.delete")}</button>
+          <Link to={`/bookings/gigs/${gig.id}`} className="col-span-2 py-2 text-[12px] text-fq-primary">{t("gig.editInBookings")} →</Link>
         </div>
       )}
 
@@ -112,13 +98,15 @@ function GigCard({ gig, onPlanned }: { gig: Gig; onPlanned: () => void }) {
 
 export function GigsPanel({ onPlanned }: { onPlanned: () => void }) {
   const t = useT();
-  const { gigs, addGig } = useGigs();
-  const sorted = [...gigs].sort((a, b) => `${a.date} ${a.loadIn}`.localeCompare(`${b.date} ${b.loadIn}`));
+  const { gigs } = useGigs();
+  // Upcoming gigs from Bookings (yesterday onwards, for gigs past midnight).
+  const from = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  const sorted = gigs.filter((g) => g.date >= from).sort((a, b) => `${a.date} ${a.loadIn}`.localeCompare(`${b.date} ${b.loadIn}`));
   return (
     <div className="space-y-3">
       {sorted.map((g) => <GigCard key={g.id} gig={g} onPlanned={onPlanned} />)}
-      {!gigs.length && <p className="text-[13px] text-fq-muted">{t("gig.empty")}</p>}
-      <button onClick={() => addGig()} className="fq-btn h-12 w-full text-sm">+ {t("gig.add")}</button>
+      {!sorted.length && <p className="text-[13px] text-fq-muted">{t("gig.empty")}</p>}
+      <Link to="/bookings" className="fq-btn h-12 w-full text-sm">+ {t("gig.add")}</Link>
       <p className="text-[11px] text-fq-muted">{t("gig.notifyNote")}</p>
     </div>
   );

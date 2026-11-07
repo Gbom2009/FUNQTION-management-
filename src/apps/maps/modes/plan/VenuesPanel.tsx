@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useGigs, type Venue, type PinField } from "../../features/gigs/store";
 import { SearchBox } from "./SearchBox";
 import { useT } from "../../i18n";
@@ -20,7 +21,7 @@ async function resizePhoto(file: File, max = 900): Promise<string> {
 
 function VenueEditor({ venue, onClose }: { venue: Venue; onClose: () => void }) {
   const t = useT();
-  const { updateVenue, removeVenue, startPicking, picking } = useGigs();
+  const { updateVenue, startPicking, picking } = useGigs();
   const file = useRef<HTMLInputElement>(null);
   const [photoMsg, setPhotoMsg] = useState<string | null>(null);
   const up = (p: Partial<Venue>) => updateVenue(venue.id, p);
@@ -90,7 +91,7 @@ function VenueEditor({ venue, onClose }: { venue: Venue; onClose: () => void }) 
       </div>
       <div className="flex gap-2">
         <button onClick={onClose} className="fq-btn h-10 flex-1 text-[12px]">{t("gig.done")}</button>
-        <button onClick={() => { removeVenue(venue.id); onClose(); }} className="h-10 px-3 text-[12px] text-fq-muted hover:text-fq-danger">{t("venue.delete")}</button>
+        <Link to={`/bookings/contacts/venue/${venue.id}`} className="flex h-10 items-center px-3 text-[12px] text-fq-muted hover:text-fq-strong">{t("venue.inBookings")}</Link>
       </div>
     </div>
   );

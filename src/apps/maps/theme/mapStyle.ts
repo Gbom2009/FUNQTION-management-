@@ -38,10 +38,11 @@ const FONT_BOLD = ["Noto Sans Bold"];
 const zoomWidth = (base: number): ExpressionSpecification =>
   ["interpolate", ["exponential", 1.5], ["zoom"], 6, base * 0.3, 12, base, 18, base * 8];
 
-/** Glyphs are bundled in public/fonts (scripts/fetch-glyphs.mjs) so labels work offline. */
+/** Glyphs are bundled in public/maps/fonts (scripts/maps/fetch-glyphs.mjs) so labels work offline. */
 function glyphsUrl(): string {
-  if (typeof location === "undefined") return services.tiles.glyphs;
-  return `${location.origin}${import.meta.env.BASE_URL}maps/fonts/{fontstack}/{range}.pbf`;
+  if (typeof document === "undefined") return services.tiles.glyphs;
+  // The hub builds with a relative base ("./"), so resolve against the page, not location.origin.
+  return `${new URL(`${import.meta.env.BASE_URL}maps/fonts/`, document.baseURI).href}{fontstack}/{range}.pbf`;
 }
 
 export interface StyleOptions {

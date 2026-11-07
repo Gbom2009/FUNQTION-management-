@@ -7,9 +7,16 @@ import {
   type KitRole, type MaintenanceLog, type MaintenancePlan, type MemberId, type PackLine, type PackList, type SafetyTest, type Settings, type WishItem,
 } from '../../core/types';
 import { runTaskSync } from '../bookings/domain/taskSync';
-import { applyScan, codeMatchesParent, defaultSetup, descendants, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, wouldCycle, type ScanOutcome } from './domain/gear';
+import { GEAR_TRAILER_ID } from '../../core/types';
+import { applyScan, trailerWeights, codeMatchesParent, defaultSetup, descendants, gearConflicts, generateLines, itemsFromCsv, itemsToCsv, mergeLines, nextCode, nextSafetyDate, normaliseCode, parseCsv, wouldCycle, type ScanOutcome } from './domain/gear';
 
 const EMPTY: never[] = [];
+
+/** Trailer max/empty weight, preferring the DJ gear trailer from Navigatie. */
+export function useTrailerWeights(settings: Settings) {
+  const trailer = useLiveQuery(() => db.vehicles.get(GEAR_TRAILER_ID), []);
+  return trailerWeights(settings, trailer);
+}
 export const useGearItems = () => alive(useLiveQuery(() => db.gearItems.toArray(), []) ?? EMPTY) as GearItem[];
 export const useGearKits = () => alive(useLiveQuery(() => db.gearKits.toArray(), []) ?? EMPTY) as GearKit[];
 export const useGearLocations = () => alive(useLiveQuery(() => db.gearLocations.toArray(), []) ?? EMPTY) as GearLocation[];

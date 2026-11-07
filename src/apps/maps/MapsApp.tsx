@@ -14,6 +14,8 @@ import { keepAwake } from "./location/wakeLock";
 import { isNight } from "./theme/sun";
 import { HOME } from "./config/services";
 import { setReminderBanner, startReminders } from "./features/gigs/reminders";
+import { startSharedSync } from "./features/shared/sync";
+import { flushWrites } from "./features/shared/writer";
 
 // Leave-by reminders run for the app lifetime.
 startReminders();
@@ -25,6 +27,9 @@ export default function MapsApp() {
   const source = useDrive((s) => s.source);
   const [reminder, setReminder] = useState<string | null>(null);
   useEffect(() => { setReminderBanner(setReminder); return () => setReminderBanner(() => {}); }, []);
+
+  // Gigs, venues, trips and vehicles come from the shared database while Maps is open.
+  useEffect(() => { const stop = startSharedSync(); return () => { stop(); void flushWrites(); }; }, []);
 
   // Language follows the hub (Settings → Taal); changing it in Maps changes the hub too.
   const { settings, updateSettings } = useSession();

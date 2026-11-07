@@ -5,6 +5,9 @@ import {
   DEFAULT_TRAILERS, DEFAULT_VEHICLES, NL_TOW_DEFAULTS, combinedDims,
   type Trailer, type TowCaps, type Vehicle, type TruckDims, type Licence,
 } from "./profiles";
+import { softDelete } from "../../../../core/repo";
+import { queueWrite } from "../shared/writer";
+import { vehicleRecord } from "../shared/mapping";
 
 interface VehicleState {
   vehicles: Vehicle[];
@@ -29,6 +32,14 @@ interface VehicleState {
 
 const uid = (p: string) => `${p}-${Date.now().toString(36)}`;
 
+const write = (kind: "car" | "trailer", v: Vehicle | Trailer) => {
+  const { id, kind: k, name, spec } = vehicleRecord(kind, v);
+  queueWrite("vehicles", id, { kind: k, name, spec }, { kind: k, name, spec });
+};
+
+// Cars and trailers are shared (suite table `vehicles`, filled by
+// features/shared/sync.ts). Which one is active, tow caps and licence are
+// about this device and stay in localStorage.
 export const useVehicles = create<VehicleState>()(
   persist(
     (set, get) => ({
@@ -40,33 +51,46 @@ export const useVehicles = create<VehicleState>()(
       licence: "B",
       setLicence: (licence) => set({ licence }),
 
-      updateVehicle: (id, p) => set({ vehicles: get().vehicles.map((v) => (v.id === id ? { ...v, ...p } : v)) }),
-      updateTrailer: (id, p) => set({ trailers: get().trailers.map((t) => (t.id === id ? { ...t, ...p } : t)) }),
-      addVehicle: () => set({ vehicles: [...get().vehicles, { id: uid("v"), name: "Nieuwe auto" }] }),
-      addTrailer: () => set({ trailers: [...get().trailers, { id: uid("t"), name: "Nieuwe aanhanger" }] }),
+      updateVehicle: (id, p) => {
+        set({ vehicles: get().vehicles.map((v) => (v.id === id ? { ...v, ...p } : v)) });
+        const v = get().vehicles.find((x) => x.id === id);
+        if (v) write("car", v);
+      },
+      updateTrailer: (id, p) => {
+        set({ trailers: get().trailers.map((t) => (t.id === id ? { ...t, ...p } : t)) });
+        const t = get().trailers.find((x) => x.id === id);
+        if (t) write("trailer", t);
+      },
+      addVehicle: () => {
+        const v: Vehicle = { id: uid("v"), name: "Nieuwe auto" };
+        set({ vehicles: [...get().vehicles, v] });
+        write("car", v);
+      },
+      addTrailer: () => {
+        const t: Trailer = { id: uid("t"), name: "Nieuwe aanhanger" };
+        set({ trailers: [...get().trailers, t] });
+        write("trailer", t);
+      },
       removeVehicle: (id) => {
         const vehicles = get().vehicles.filter((v) => v.id !== id);
         if (!vehicles.length) return;
         set({ vehicles, activeVehicleId: get().activeVehicleId === id ? vehicles[0].id : get().activeVehicleId });
+        void softDelete("vehicles", id);
       },
-      removeTrailer: (id) => set({
-        trailers: get().trailers.filter((t) => t.id !== id),
-        activeTrailerId: get().activeTrailerId === id ? null : get().activeTrailerId,
-      }),
+      removeTrailer: (id) => {
+        set({
+          trailers: get().trailers.filter((t) => t.id !== id),
+          activeTrailerId: get().activeTrailerId === id ? null : get().activeTrailerId,
+        });
+        void softDelete("vehicles", id);
+      },
       setActiveVehicle: (activeVehicleId) => set({ activeVehicleId }),
       setActiveTrailer: (activeTrailerId) => set({ activeTrailerId }),
       setTowCaps: (c) => set({ towCaps: { ...get().towCaps, ...c } }),
     }),
     {
-      name: "fq-vehicles", storage: lazyStorage,
-      version: 2,
-      migrate: (state) => {
-        const st = state as VehicleState;
-        st.vehicles = st.vehicles.map((v) => ({ ...(DEFAULT_VEHICLES.find((d) => d.id === v.id) ?? {}), ...v }));
-        st.trailers = st.trailers.map((t) => ({ ...(DEFAULT_TRAILERS.find((d) => d.id === t.id) ?? {}), ...t }));
-        st.licence ??= "B";
-        return st;
-      },
+      name: "fq-maps-vehicle-prefs", storage: lazyStorage,
+      partialize: ({ activeVehicleId, activeTrailerId, towCaps, licence }) => ({ activeVehicleId, activeTrailerId, towCaps, licence }),
     },
   ),
 );

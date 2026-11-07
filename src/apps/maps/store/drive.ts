@@ -86,7 +86,7 @@ export const useDrive = create<DriveState>()(
       set: (p) => set(p),
     }),
     {
-      name: "fq-drive", storage: lazyStorage,
+      name: "fq-maps-drive", storage: lazyStorage,
       partialize: ({ muted, source, devTools, simMultiplier, simNoiseM, simSpeedMode, simFixedKmh, simBrake }) => ({ muted, source, devTools, simMultiplier, simNoiseM, simSpeedMode, simFixedKmh, simBrake }),
     },
   ),

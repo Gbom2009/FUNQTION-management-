@@ -61,7 +61,7 @@ export const useGuidance = create<GuidanceState>()(
         set({ overrides: o });
       },
     }),
-    { name: "fq-guidance", storage: lazyStorage },
+    { name: "fq-maps-guidance", storage: lazyStorage },
   ),
 );
 
