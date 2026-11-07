@@ -18,6 +18,7 @@ export default function RequestsPanel({ gigId, nowTrackId, onPlayed, full }: { g
   useEffect(() => {
     if (!ok) return;
     let stop: (() => void) | undefined;
+    let poll: ReturnType<typeof setInterval> | undefined;
     let alive = true;
     void (async () => {
       try {
@@ -25,14 +26,15 @@ export default function RequestsPanel({ gigId, nowTrackId, onPlayed, full }: { g
         if (!alive) return;
         setSession(s);
         if (!s) return;
-        const load = async () => { try { setItems(await queue(s.id)); setErr(null); } catch (e) { setErr(String((e as Error).message)); } };
+        const load = async () => { try { const q = await queue(s.id); if (alive) { setItems(q); setErr(null); } } catch (e) { if (alive) setErr(String((e as Error).message)); } };
         await load();
-        stop = await watch(s.id, () => void load());
+        // Live via realtime; a slow poll as a fallback for bad venue internet.
+        poll = setInterval(() => void load(), 20000);
+        const unsub = await watch(s.id, () => void load());
+        if (alive) stop = unsub; else unsub();
       } catch (e) { setErr(String((e as Error).message)); }
     })();
-    const poll = setInterval(() => { if (session) void queue(session.id).then(setItems).catch(() => undefined); }, 20000);
-    return () => { alive = false; stop?.(); clearInterval(poll); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { alive = false; stop?.(); if (poll) clearInterval(poll); };
   }, [gigId, ok]);
 
   const now = tracks.find((x) => x.id === nowTrackId);
