@@ -1,7 +1,7 @@
 {
   "name": "funqtion-hub",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "Team Funqtion business suite - FEEL THE MUSIQ",
   "scripts": {

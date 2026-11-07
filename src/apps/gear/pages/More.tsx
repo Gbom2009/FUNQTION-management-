@@ -10,13 +10,12 @@ import { centsFromInput, euro, fmtDate, inputFromCents } from '../../../core/for
 import { alive } from '../../../core/repo';
 import { todayStr } from '../../../core/dates';
 import { download } from '../../../core/backup';
-import { GEAR_CATEGORIES, type GearCategory, type GearItem, type GearOwner, type GearRental, type LabelType, type WishItem } from '../../../core/types';
-import { save } from '../../../core/repo';
+import { GEAR_CATEGORIES, type GearCategory, type GearOwner, type GearRental, type WishItem } from '../../../core/types';
 import { useGigs } from '../../bookings/data';
 import {
   buyWish, exportGearCsv, importGearCsv, returnRental, saveRental, saveWish, useGearItems, useGearLocations, usePhotoMeta, useRentals, useWishlist,
 } from '../data';
-import { completeness, defaultLabelType, insuranceTotals } from '../domain/gear';
+import { completeness, insuranceTotals } from '../domain/gear';
 import starterCsv from '../../../../docs/gear-inventory/gear-list.csv?raw';
 
 export function More() {
@@ -159,62 +158,6 @@ export function Insurance() {
 }
 
 // ---------------------------------------------------------------------------
-
-const LABEL_TYPES: LabelType[] = ['qr_large', 'qr_small', 'barcode'];
-
-export function Labels() {
-  const { t } = useI18n();
-  const toast = useToast();
-  const { settings } = useSession();
-  const items = useGearItems().filter((i) => i.status !== 'disposed').sort((a, b) => a.code.localeCompare(b.code));
-  const [cat, setCat] = useState<GearCategory | ''>('');
-  const [sel, setSel] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const typeOf = (i: GearItem) => i.labelType ?? defaultLabelType(i);
-  const visible = items.filter((i) => !cat || i.category === cat);
-  const chosen = items.filter((i) => sel.includes(i.id));
-  const setType = (list: GearItem[], type: LabelType) => Promise.all(list.map((i) => save<GearItem>('gearItems', { ...i, labelType: type })));
-  async function make() {
-    setBusy(true);
-    try {
-      const [{ labelSheets }, { pdfBlob }, zx] = await Promise.all([import('../domain/pdfDocs'), import('../../invoicing/pdf'), import('../zxing')]);
-      const sections = LABEL_TYPES.map((type) => ({ type, items: chosen.filter((i) => typeOf(i) === type) }));
-      const bars = await zx.code128Map(sections.find((x) => x.type === 'barcode')!.items.map((i) => i.code));
-      const owner = `${t('g.propertyOf')} ${settings.businessName}${settings.bizPhone ? ` · ${settings.bizPhone}` : ''}`;
-      download(`funqtion-labels-${todayStr()}.pdf`, await pdfBlob(labelSheets(sections, owner, bars)), 'application/pdf');
-    } catch (e) {
-      toast(String(e));
-    } finally { setBusy(false); }
-  }
-  const count = (type: LabelType) => chosen.filter((i) => typeOf(i) === type).length;
-  return (
-    <div>
-      <div className="page-head"><h1>{t('g.labels')}</h1><button className="btn primary" disabled={!chosen.length || busy} onClick={make}>{t('g.makePdf', { n: chosen.length })}</button></div>
-      <p className="small muted">{t('g.labelsHint2')}</p>
-      <div className="row" style={{ margin: 'var(--s3) 0', flexWrap: 'wrap' }}>
-        <select className="input" style={{ width: 'auto' }} value={cat} onChange={(e) => setCat(e.target.value as GearCategory | '')} aria-label={t('g.category')}><option value="">{t('g.allCategories')}</option>{GEAR_CATEGORIES.map((c) => <option key={c} value={c}>{t(`g.cat.${c}`)}</option>)}</select>
-        <button className="chip" onClick={() => setSel([...new Set([...sel, ...visible.map((i) => i.id)])])}>{t('g.selectVisible')}</button>
-        <button className="chip" onClick={() => setSel([])}>{t('g.selectNone')}</button>
-      </div>
-      {chosen.length > 0 && (
-        <div className="card row" style={{ marginBottom: 'var(--s3)', flexWrap: 'wrap' }}>
-          <span className="small">{t('g.selectedN', { n: chosen.length })} · {LABEL_TYPES.map((x) => `${t(`g.label.${x}`)} ${count(x)}`).join(' · ')}</span>
-          <span className="grow" />
-          {LABEL_TYPES.map((x) => <button key={x} className="btn small" onClick={() => setType(chosen, x)}>{t('g.setAll', { type: t(`g.label.${x}`) })}</button>)}
-        </div>
-      )}
-      <div className="list">{visible.map((i) => (
-        <div key={i.id} className="list-item" style={{ minHeight: 48 }}>
-          <label className="check grow" style={{ minHeight: 0 }}><input type="checkbox" checked={sel.includes(i.id)} onChange={(e) => setSel(e.target.checked ? [...sel, i.id] : sel.filter((x) => x !== i.id))} />
-            <span className="mono">{i.code}</span> {i.name}{i.kind === 'counted' ? <span className="tiny muted"> ({t('g.oneLabelForGroup')})</span> : null}</label>
-          <select className="input" style={{ width: 'auto' }} value={typeOf(i)} aria-label={t('g.labelType')} onChange={(e) => setType([i], e.target.value as LabelType)}>
-            {LABEL_TYPES.map((x) => <option key={x} value={x}>{t(`g.label.${x}`)}</option>)}
-          </select>
-        </div>
-      ))}</div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 

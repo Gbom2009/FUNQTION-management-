@@ -473,6 +473,7 @@ export interface Settings {
   /** group = scanning a case ticks off everything in it; each = every item must be scanned itself. */
   gearLoadScan: 'group' | 'each';
   gearUnloadScan: 'group' | 'each';
+  gearLabelPresets?: LabelPreset[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -883,12 +884,35 @@ export interface GearItem extends Base {
   usageGigs: number;
   firmware?: string;
   laserClass?: string;
-  labelType?: LabelType;     // preferred label for printing
+  labelType?: LabelType;     // preferred label size (older field; the preset decides)
+  labelPreset?: string;      // LabelPreset id
   notes?: string;
 }
 
 /** QR large for cases and big gear, QR small, or a Code 128 barcode strip (wraps around cables). */
 export type LabelType = 'qr_large' | 'qr_small' | 'barcode';
+export type Paint = 'black' | 'white' | 'orange';
+
+/** A label design (Gear → Labels → Ontwerpen). Built-ins: plain and Funqtion style per size. */
+export interface LabelPreset {
+  id: string;
+  name: string;
+  size: LabelType;                 // qr_large / qr_small / barcode
+  background: Paint;               // the whole label
+  symbol: Paint;                   // QR modules / barcode bars
+  patch: boolean;                  // white box behind the code (scans everywhere, also on black labels)
+  modules: 'square' | 'rounded' | 'dots'; // QR only
+  logo: boolean;                   // QR: Funqtion logo in the middle; barcode: logo at the start
+  frame: 'none' | 'brackets' | 'line';
+  showCode: boolean;
+  showName: boolean;
+  showOwner: boolean;              // "Eigendom van Team Funqtion · 06-…"
+  showTagline: boolean;            // FEEL THE MUSIQ
+  customText?: string;             // e.g. @funqtionofficial
+  repeat: 1 | 2 | 3;               // barcode: copies per strip
+  barHeight: 'low' | 'mid' | 'high';
+}
+
 
 export interface GearPhoto extends Base {
   itemId: ID;

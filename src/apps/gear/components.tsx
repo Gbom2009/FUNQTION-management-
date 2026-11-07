@@ -74,6 +74,7 @@ function Camera({ onCode }: { onCode: (code: string) => void }) {
     let timer = 0;
     let stopped = false;
     let busy = false;
+    let frame = 0;
     let lock: { release: () => Promise<void> } | null = null;
     const canvas = document.createElement('canvas');
     let detector: Detector | null = null;
@@ -104,10 +105,15 @@ function Camera({ onCode }: { onCode: (code: string) => void }) {
           if (stopped || busy || !v.videoWidth) return;
           busy = true;
           try {
+            frame++;
+            let found = false;
             if (detector) {
               const r = await detector.detect(v);
-              if (r[0]?.rawValue) emit(r[0].rawValue);
-            } else if (decode) {
+              if (r[0]?.rawValue) { emit(r[0].rawValue); found = true; }
+            }
+            // zxing also handles inverted codes (orange on black); with a detector, try it every other frame.
+            if (!found && (!detector || frame % 2 === 0)) {
+              decode ??= (await import('./zxing')).decodeFrame;
               const scale = Math.min(1, 960 / v.videoWidth);
               canvas.width = Math.round(v.videoWidth * scale); canvas.height = Math.round(v.videoHeight * scale);
               const ctx = canvas.getContext('2d', { willReadFrequently: true })!;

@@ -26,7 +26,7 @@ The app imports this file with *Gear → Instellingen → Startlijst importeren*
 | `electrical` | `class1` (earthed plug) / `class2` (double insulated) / `none` | For safety tests later. |
 | `power_w` | number | Power draw, for the power budget per gig. |
 | `kits` | `standard`, `dj_controller`, `dj_usb`, `dj_light`, `always`, `outdoor` (several: separate with `;`) | `standard` = the usual full set-up. For venues with their own sound it varies per venue: `dj_controller` = controller only, `dj_usb` = only USB sticks (+ headphones), `dj_light` = controller + a bit of light. `always` = goes to every gig. In the app you pick the set-up per gig. |
-| `label` | `qr_large` / `qr_small` / `barcode` (optional) | Preferred label. Empty = automatic: barcode for cables, large QR for cases and big gear, small QR otherwise. |
+| `label` | a design: `qr_large`, `qr_large_fq`, `qr_small`, `qr_small_fq`, `barcode`, `barcode_fq` or your own design's id (optional) | Label design (`_fq` = Funqtion style: black label, orange code, logo). Empty = automatic: barcode for cables, large QR for cases and big gear, small QR otherwise. |
 | `notes` | text | Rows still marked `TEMP placeholder` have not been checked against the real gear. |
 
 ## For Claude (when updating)

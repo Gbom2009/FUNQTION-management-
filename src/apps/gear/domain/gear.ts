@@ -366,7 +366,8 @@ export function itemsFromCsv(rows: Record<string, string>[]): CsvItem[] {
       purchasePrice: euroToCents(r.purchase_price_eur), replacementValue: euroToCents(r.replacement_value_eur),
       electrical: oneOf(r.electrical, ['class1', 'class2', 'none'] as const, 'none'), powerW: num(r.power_w), usageHours: 0, usageGigs: 0,
       notes: r.notes || undefined,
-      labelType: (['qr_large', 'qr_small', 'barcode'] as const).find((x) => x === r.label),
+      labelType: (['qr_large', 'qr_small', 'barcode'] as const).find((x) => x === r.label || r.label?.startsWith(`${x}_`)),
+      labelPreset: r.label && !['qr_large', 'qr_small', 'barcode'].includes(r.label) ? r.label : undefined,
     },
     homeKey: ['home_gijs', 'home_coen', 'trailer', 'car'].includes(r.home_location) ? r.home_location : undefined,
     containerCode: /^FQ-\d+$/i.test(r.container ?? '') ? r.container.toUpperCase() : undefined,
@@ -382,7 +383,7 @@ export function itemsToCsv(items: GearItem[], kits: GearKit[], ctx: { locationKe
     const roles = kits.filter((k) => !k.deletedAt && k.lines.some((l) => l.itemId === i.id)).map((k) => k.role).filter((r) => r !== 'custom');
     lines.push([i.code, i.kind, i.name, i.category, i.brand, i.model, i.serial, i.quantity, i.owner, ctx.locationKey(i.homeLocationId), ctx.codeOf(i.parentId), i.transport, i.weightKg,
       i.purchaseDate, i.purchasePrice != null ? (i.purchasePrice / 100).toFixed(2) : '', i.replacementValue != null ? (i.replacementValue / 100).toFixed(2) : '',
-      i.electrical, i.powerW, [...new Set(roles)].join(';'), i.notes, i.labelType].map(csvCell).join(','));
+      i.electrical, i.powerW, [...new Set(roles)].join(';'), i.notes, i.labelPreset ?? i.labelType].map(csvCell).join(','));
   }
   return lines.join('\n') + '\n';
 }

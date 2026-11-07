@@ -383,3 +383,9 @@ body.night .scanner-view { filter: none; }
 .pack-line.skipped { opacity: 0.45; }
 .pack-line.skipped .pack-name { font-style: italic; }
 .tree-mark { color: var(--fq-text-dim); margin-right: -6px; font-family: var(--fq-font-mono); }
+.lbl-preview { border: 1px solid var(--fq-rule-color); padding: 8px; overflow: hidden; font-family: var(--fq-font-mono); box-sizing: border-box; max-width: 100%; }
+.lbl-preview img { display: block; }
+.lbl-code { font-weight: 400; line-height: 1.1; }
+.lbl-text { min-width: 0; overflow: hidden; }
+.swatch { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--fq-rule-color); margin-right: 6px; vertical-align: middle; }
+.swatch.big { width: 28px; height: 28px; border-width: 4px; margin: 0; flex: none; }

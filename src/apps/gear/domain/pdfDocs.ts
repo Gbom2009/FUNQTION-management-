@@ -1,5 +1,6 @@
 import type { GearItem, LabelType, Lang } from '../../../core/types';
 import type { Bars } from './barcode';
+import { barcodeArt, colors, logoArt, qrArt, type LabelPreset } from './labelArt';
 import { translate } from '../../../core/i18n';
 import { euro } from '../../../core/format';
 
@@ -13,39 +14,10 @@ const DIM = '#6b6b6b';
 
 type LabelItem = Pick<GearItem, 'code' | 'name' | 'owner'>;
 
-const grid = (cells: Node[], cols: number, rowH: number): Node => {
-  const body: Node[][] = [];
-  for (let i = 0; i < cells.length; i += cols) {
-    const row = cells.slice(i, i + cols);
-    while (row.length < cols) row.push({ text: '' });
-    body.push(row);
-  }
-  return { table: { widths: Array(cols).fill('*'), heights: rowH, body, dontBreakRows: true }, layout: { hLineWidth: () => 0.2, vLineWidth: () => 0.2, hLineColor: () => '#dddddd', vLineColor: () => '#dddddd', paddingLeft: () => 6, paddingTop: () => 4 } };
-};
-
-/** Code 128 as an SVG of rectangles (crisp at any size); `module` = width of the thinnest bar in points. */
-export function barcodeSvg(b: Bars, height = 30): string {
-  const rects = b.bars.map(([x, w]) => `<rect x="${x}" y="0" width="${w}" height="${height}"/>`).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${b.modules}" height="${height}" viewBox="0 0 ${b.modules} ${height}" preserveAspectRatio="none"><g fill="#000000">${rects}</g></svg>`;
-}
-
-export function barcodeNode(b: Bars, module: number, height: number): Node {
-  return { svg: barcodeSvg(b, height), width: Math.max(1, b.modules * module), height };
-}
-
-function cell(type: LabelType, it: LabelItem, ownerLine: string, bars?: Bars): Node {
-  if (type === 'qr_small') {
-    return { columns: [{ width: 56, qr: it.code, fit: 56, margin: [0, 2, 0, 0] }, { width: '*', stack: [{ text: it.code, bold: true, fontSize: 9 }, { text: it.name, fontSize: 6, color: DIM, margin: [0, 2, 0, 0] }], margin: [4, 6, 0, 0] }], columnGap: 2 };
-  }
-  if (type === 'qr_large') {
-    return { columns: [{ width: 92, qr: it.code, fit: 92 }, { width: '*', stack: [{ text: it.code, bold: true, fontSize: 16 }, { text: it.name, fontSize: 9, margin: [0, 3, 0, 0] }, { text: ownerLine, fontSize: 6.5, color: DIM, margin: [0, 6, 0, 0] }], margin: [6, 4, 0, 0] }], columnGap: 4 };
-  }
-  // Barcode strip for cables: the same barcode twice, so one is always readable after wrapping.
-  const b = bars ?? { modules: 0, bars: [] };
-  const w = b.modules * 1.1;
-  const one = (): Node => ({ width: w, stack: [barcodeNode(b, 1.1, 30), { text: it.code, fontSize: 7, alignment: 'center', margin: [0, 1, 0, 0] }] });
-  // White space around each barcode (quiet zone) so scanners find the start and end.
-  return { stack: [{ columns: [one(), one()], columnGap: 20, margin: [8, 0, 0, 0] }, { text: it.name, fontSize: 5.5, color: DIM, margin: [8, 1, 0, 0] }] };
+export interface LabelArt {
+  qr: Record<string, { size: number; dark: boolean[] }>; // per code (error correction H when the design has a logo)
+  bars: Record<string, Bars>;
+  logoSvg?: string;                                      // public/logo.svg
 }
 
 const LAYOUT: Record<LabelType, { cols: number; rowH: number }> = {
@@ -54,15 +26,60 @@ const LAYOUT: Record<LabelType, { cols: number; rowH: number }> = {
   barcode: { cols: 2, rowH: 58 },    // 2 × 13 strips (≈ 99 × 21 mm): wrap lengthwise around a cable
 };
 
+function textLines(p: LabelPreset, it: LabelItem, ownerLine: string, big: boolean): Node[] {
+  const c = colors(p);
+  return [
+    p.showCode ? { text: it.code, bold: true, fontSize: big ? 16 : 9, color: c.accent } : '',
+    p.showName ? { text: it.name, fontSize: big ? 9 : 6, color: c.text, margin: [0, 2, 0, 0] } : '',
+    p.showOwner ? { text: ownerLine, fontSize: big ? 6.5 : 5, color: c.text, opacity: 0.75, margin: [0, big ? 6 : 2, 0, 0] } : '',
+    p.customText ? { text: p.customText, fontSize: big ? 7 : 5.5, color: c.text, margin: [0, 2, 0, 0] } : '',
+    p.showTagline ? { text: 'FEEL THE MUSIQ', fontSize: big ? 6.5 : 5, color: c.accent, characterSpacing: 1, margin: [0, big ? 4 : 2, 0, 0] } : '',
+  ].filter(Boolean);
+}
+
+function cell(p: LabelPreset, it: LabelItem, ownerLine: string, art: LabelArt): Node {
+  const c = colors(p);
+  if (p.size !== 'barcode') {
+    const big = p.size === 'qr_large';
+    const m = art.qr[it.code];
+    const side = big ? 92 : 56;
+    const qr = m ? { svg: qrArt(m, p, art.logoSvg), width: side, height: side } : { qr: it.code, fit: side, foreground: c.ink, background: c.behind };
+    return { fillColor: c.bg, columns: [{ width: side, ...qr }, { width: '*', stack: textLines(p, it, ownerLine, big), margin: [big ? 6 : 4, big ? 4 : 5, 0, 0] }], columnGap: 2 };
+  }
+  // Barcode strip for cables: the same barcode 1–3 times, so one is always readable after wrapping.
+  const b = art.bars[it.code] ?? { modules: 0, bars: [] };
+  const svg = barcodeArt(b, p);
+  const units = Number(svg.match(/width="(\d+)"/)?.[1] ?? b.modules);
+  const logoW = p.logo && art.logoSvg ? 30 : 0;
+  const scale = Math.min(1.1, (262 - logoW - (p.repeat - 1) * 8) / (p.repeat * Math.max(1, units)));
+  const w = units * scale;
+  const h = Number(svg.match(/height="(\d+)"/)?.[1] ?? 30) * Math.min(1, scale + 0.2);
+  const copies = Array.from({ length: p.repeat }, () => ({ width: w, stack: [{ svg, width: w, height: h }, p.showCode ? { text: it.code, fontSize: 6.5, alignment: 'center', color: c.accent, margin: [0, 1, 0, 0] } : ''].filter(Boolean) }));
+  const logo = p.logo && art.logoSvg ? [{ width: 22, svg: logoArt(p, art.logoSvg), height: 22, margin: [0, 4, 0, 0] }] : [];
+  const extra = textLines({ ...p, showCode: false }, it, ownerLine, false);
+  return { fillColor: c.bg, stack: [{ columns: [...logo, ...copies], columnGap: 8 }, ...extra.map((x: Node) => ({ ...x, fontSize: 5.5 }))] };
+}
+
+function grid(cells: Node[], cols: number, rowH: number, bg: string): Node {
+  const body: Node[][] = [];
+  for (let i = 0; i < cells.length; i += cols) {
+    const row = cells.slice(i, i + cols);
+    while (row.length < cols) row.push({ text: '', fillColor: bg });
+    body.push(row);
+  }
+  return { table: { widths: Array(cols).fill('*'), heights: rowH, body, dontBreakRows: true },
+    layout: { hLineWidth: () => 0.3, vLineWidth: () => 0.3, hLineColor: () => '#bbbbbb', vLineColor: () => '#bbbbbb', paddingLeft: () => 6, paddingTop: () => 4 } };
+}
+
 /**
- * A4 label sheets, one section per label type (each starts on a new page).
- * Black on white for reliable scanning; the code in mono under every symbol.
+ * A4 label sheets: one section per design (each starts on a new page). Thin grey
+ * lines between labels are cutting guides; coloured designs fill the whole label.
  */
-export function labelSheets(sections: { type: LabelType; items: LabelItem[] }[], ownerLine: string, bars: Record<string, Bars> = {}): Node {
+export function labelSheets(sections: { preset: LabelPreset; items: LabelItem[] }[], ownerLine: string, art: LabelArt): Node {
   const used = sections.filter((x) => x.items.length);
   const content: Node[] = used.flatMap((sec, i) => [
-    { text: `${sec.type === 'barcode' ? 'BARCODE' : 'QR'} · ${sec.items.length}`, fontSize: 6, color: DIM, margin: [0, 0, 0, 4], ...(i > 0 ? { pageBreak: 'before' } : {}) },
-    grid(sec.items.map((it) => cell(sec.type, it, ownerLine, bars[it.code])), LAYOUT[sec.type].cols, LAYOUT[sec.type].rowH),
+    { text: `${sec.preset.name} · ${sec.items.length}`, fontSize: 6, color: DIM, margin: [0, 0, 0, 4], ...(i > 0 ? { pageBreak: 'before' } : {}) },
+    grid(sec.items.map((it) => cell(sec.preset, it, ownerLine, art)), LAYOUT[sec.preset.size].cols, LAYOUT[sec.preset.size].rowH, colors(sec.preset).bg),
   ]);
   return {
     pageSize: 'A4',

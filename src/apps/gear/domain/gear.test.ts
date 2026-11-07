@@ -7,6 +7,7 @@ import {
   parseCsv, progress, safetyDue, trailerPayload,
 } from './gear';
 import { insuranceList, labelSheets } from './pdfDocs';
+import { DEFAULT_PRESETS } from './labelArt';
 
 const base = { createdAt: '2026-01-01T00:00:00.000Z', createdBy: 'gijs' as const, updatedAt: '', updatedBy: 'gijs' as const };
 const item = (id: string, p: Partial<GearItem> = {}): GearItem => ({
@@ -164,7 +165,9 @@ describe('gear pdfs', () => {
   it('renders QR label sheets and the insurance list', async () => {
     const items = Array.from({ length: 23 }, (_, i) => item(String(i + 1), { name: `Item met een vrij lange naam ${i + 1}` }));
     const bars = Object.fromEntries(items.map((i) => [i.code, { modules: 20, bars: [[0, 2], [3, 1], [6, 3]] as [number, number][] }]));
-    const sheet = await render(labelSheets([{ type: 'qr_large', items: items.slice(0, 3) }, { type: 'qr_small', items: items.slice(3, 9) }, { type: 'barcode', items: items.slice(9) }], 'Eigendom van Team Funqtion', bars));
+    const qr = Object.fromEntries(items.map((i) => [i.code, { size: 21, dark: Array.from({ length: 441 }, (_, k) => k % 3 === 0) }]));
+    const logoSvg = readFileSync('public/logo.svg', 'utf8');
+    const sheet = await render(labelSheets(DEFAULT_PRESETS.map((preset, k) => ({ preset, items: items.slice(k * 4, k * 4 + 4) })), 'Eigendom van Team Funqtion', { qr, bars, logoSvg }));
     expect(sheet.subarray(0, 4).toString()).toBe('%PDF');
     const pdf = await render(insuranceList(items.map((i) => ({ item: { ...i, purchasePrice: 10000 }, locationName: 'Thuis Gijs', hasPhoto: true, hasReceipt: false })), { lang: 'nl', businessName: 'Team Funqtion', date: '2026-11-07', total: 230000 }));
     expect(pdf.length).toBeGreaterThan(1000);
