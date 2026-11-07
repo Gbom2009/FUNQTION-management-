@@ -1,6 +1,6 @@
 # Gear list (temporary)
 
-> **TEMPORARY.** `gear-list.csv` is a placeholder for a typical Funqtion set-up, so the Gear app has something to build and test with. It is **not** your real inventory: names are generic, and brands, models, serial numbers, dates, prices and most owners are empty or `unknown`. Replace it when Gijs and Coen have compiled the real list (send it in any form: a spreadsheet, a photo of a handwritten list, a WhatsApp message; Claude converts it).
+> **PARTLY TEMPORARY.** The rows marked *Standaard set (bevestigd)* are the confirmed standard set-up (all-in-one DJ controller, light bar with lights and the Laserworld DS-1000 Mk III laser, 2 tops, 1 sub, DJ booth, light & sound rack). Everything marked `TEMP placeholder` is a guess for a typical Funqtion set-up, so the Gear app has something to build and test with. It is **not** your real inventory: names are generic, and brands, models, serial numbers, dates, prices and most owners are empty or `unknown`. Replace it when Gijs and Coen have compiled the real list (send it in any form: a spreadsheet, a photo of a handwritten list, a WhatsApp message; Claude converts it).
 
 The Gear app (App 5) will import this file on first start (CSV import, see `PLAN.md` §4 MVP). After that the app's own database is the source of truth; this file is only the starting point and a backup-friendly overview.
 
@@ -14,14 +14,16 @@ The Gear app (App 5) will import this file on first start (CSV import, see `PLAN
 | `category` | `decks`, `mixers`, `laptops`, `headphones`, `speakers`, `subs`, `monitors`, `lighting`, `lasers`, `effects`, `dmx`, `power`, `audio_cables`, `stands`, `cases`, `furniture`, `tools`, `small` | Matches the seeded categories in `PLAN.md` §2.3. |
 | `brand`, `model`, `serial` | text | Serial numbers matter for insurance and theft reports. |
 | `quantity` | number | `1` for unique items and containers. |
-| `owner` | `gijs` / `coen` / `shared` / `unknown` | `unknown` = still to decide. |
-| `home_location` | `home_gijs` / `home_coen` / `van` | Gear lives at both homes and goes to gigs in a van. |
+| `owner` | `gijs` / `coen` / `shared` / `unknown` | Ownership is mixed: some gear is Gijs's, some Coen's, some shared. `unknown` = still to fill in. |
+| `home_location` | `home_gijs` / `home_coen` / `unknown` | Gear lives at both homes. |
+| `transport` | `trailer` / `car` | Gigs go by personal car + trailer. Valuable and fragile things (controller, laptop, laser, headphones, USBs) go in the car. |
+| `weight_kg` | number | For the trailer's load total and load order. |
 | `container` | code of a container, or empty | Where it's normally packed. |
 | `purchase_date` | `yyyy-mm-dd` | Approximate is fine (`2023-01-01`). |
 | `purchase_price_eur`, `replacement_value_eur` | number, e.g. `1249.00` | Replacement value = what it costs new today. |
 | `electrical` | `class1` (earthed plug) / `class2` (double insulated) / `none` | For safety tests later. |
 | `power_w` | number | Power draw, for the power budget per gig. |
-| `kits` | `dj_only`, `sound_small`, `sound_big`, `light_basic`, `laser`, `always` (several: separate with `;`) | Which standard set-up it belongs to. |
+| `kits` | `standard`, `dj_only`, `always` (several: separate with `;`) | `standard` = the usual full set-up; `dj_only` = venues with their own sound and light; `always` = goes to every gig. |
 | `notes` | text | Rows still marked `TEMP placeholder` have not been checked against the real gear. |
 
 ## For Claude (when updating)

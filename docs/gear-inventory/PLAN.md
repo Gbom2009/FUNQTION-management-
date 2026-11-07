@@ -4,9 +4,13 @@
 > Status: functional plan, no code yet. Builds on App 1 (Bookings & CRM), App 2 (Quotes & Invoices), App 3 (Money & Accounting) and App 4 (Contracts), all live in this repo in local mode.
 > **Decisions made (answers from Gijs)**: these replace the matching recommendations below.
 > - **Sync:** start with **one gig phone** per gig (§0.2, option A in §7.3). The home server stays a later step.
-> - **Phones:** both **iPhone** (15 Pro and 16 Pro). So: **QR only** in the web app (Safari has no Web NFC), scanning always inside the installed app, and no reliable web torch control: labels must be high-contrast and placed consistently, with a small clip-on light in the van. NFC only if the native iPhone app (Tauri iOS) is built later (§5).
+> - **Phones:** both **iPhone** (15 Pro and 16 Pro). So: **QR only** in the web app (Safari has no Web NFC), scanning always inside the installed app, and no reliable web torch control: labels must be high-contrast and placed consistently, with a small clip-on light in the trailer. NFC only if the native iPhone app (Tauri iOS) is built later (§5).
 > - **Gear list:** a temporary placeholder list is in [`gear-list.csv`](gear-list.csv) (format in [`GEAR-LIST.md`](GEAR-LIST.md)). Claude replaces it when the real list is compiled; the app imports it on first start.
-> - **Storage and transport:** gear lives at **both homes** (Gijs and Coen) and goes to gigs in **a van**. Locations: *Thuis Gijs*, *Thuis Coen*, *Bus*. Packing lists are sorted by home, and a "pick-up at Coen's" step is part of loading.
+> - **Storage and transport:** gear lives at **both homes** (Gijs and Coen) and goes to gigs in **a trailer behind a personal car** (no van). Locations: *Thuis Gijs*, *Thuis Coen*, *Aanhanger*, *Auto* (small and valuable things such as the laptop, controller, laser and headphones travel in the car, not in the trailer). Packing lists are sorted by home, with a "pick-up at Coen's/Gijs's" step, and show a **load order** for the trailer (§1.3).
+> - **Gig phone:** chosen **per gig**, and it doesn't have to be the gig's owner in Bookings. The packing list shows whose phone it is; it can be handed over (e.g. Gijs loads, Coen unloads) with an export/import of that one list.
+> - **Ownership:** **mixed**: some gear is Gijs's, some is Coen's, some is shared. Every item has an owner (`gijs` / `coen` / `shared`); the insurance overview and App 3 show totals per owner.
+> - **Standard set-up** (one kit, "Standaard set"): all-in-one DJ controller, one light bar with lights and the laser, 2 top speakers, 1 subwoofer, a DJ booth, and a light & sound rack. A "DJ only" kit (controller + headphones + USBs) is for venues with their own sound and light.
+> - **Laser:** Gijs's **Laserworld DS-1000 Mark III, class 4**. Class 4 gets its own safety checklist in the app (§6.3).
 > - **Labels:** **A4 weatherproof polyester sheets**, PDF from the app.
 > - **Safety tests (NEN 3140):** **not now**. The feature is built but off by default (Settings → Gear → Keuringen), so no warnings appear until it's switched on.
 > - **Rentals:** **rarely**. Simple rent-in/lend-out tracking with return reminders; no rent-out invoices or rental contract in the MVP.
@@ -41,7 +45,7 @@
 
 That makes packing for a typical wedding about 10–15 scans instead of 80.
 
-**0.2 Two phones at one gig need sync, and the app doesn't have that yet.** Apps 1–4 store everything on each device; Gijs and Coen share data with backup export/import (`docs/HANDOFF.md`). For gear that's a real limit: if Gijs checks out the van at home and Coen checks in at the venue at 02:00, both phones need the same packing list.
+**0.2 Two phones at one gig need sync, and the app doesn't have that yet.** Apps 1–4 store everything on each device; Gijs and Coen share data with backup export/import (`docs/HANDOFF.md`). For gear that's a real limit: if Gijs loads the trailer at home and Coen checks in at the venue at 02:00, both phones need the same packing list.
 
 - **MVP:** one **"gig phone"** per gig does the whole check-out and check-in (a clear owner shown on the packing list). Everything else (register, repairs, insurance) works per device, with the existing backup merge.
 - **Recommended next step:** the small home server that's been "maybe later" since App 3 (PocketBase on a Raspberry Pi/NAS + Tailscale, §7.3). Gear is the app where it pays off most. Decide in Q3.
@@ -60,7 +64,7 @@ flowchart LR
   R --> T[Tagged: QR label / NFC]
   T --> A[Available at location]
   A -->|gig confirmed| P[Reserved on packing list]
-  P -->|scan in van| O[Checked out: on the road]
+  P -->|scan in trailer / car| O[Checked out: on the road]
   O -->|scan after gig| A
   O -->|missing at check-in| M[Missing → follow-up task]
   A -->|issue found| I[Issue: out of service?]
@@ -104,7 +108,7 @@ flowchart LR
 4. **Reservation:** items on a confirmed list are **reserved** for the gig's time window (load-out from home → back home, from App 1's set-up/start/end times + travel time). The conflict check (§1.5) runs immediately.
 5. **Day before:** a notification *"Morgen: Bruiloft Lisa & Tom – 14 colli te laden"* with any blockers (an item out of service, a safety check overdue, an item still lent out).
 
-### 1.3 Check-out (loading the van)
+### 1.3 Check-out (loading the trailer and car)
 
 1. Open the gig → **Inladen** (or scan any tag: if it's on today's list, the app opens that list).
 2. **Scan mode**, with the camera on continuously:
@@ -114,15 +118,16 @@ flowchart LR
    - an item **not on the list** → amber "Niet op de lijst – toch meenemen?" (adds it, so it's checked back in later)
    - an item **out of service** or **safety check overdue** → red block "Defect: niet meenemen" (you can override with a reason)
    - an item **reserved for another gig today** → red "Gereserveerd voor Kermis vrijdag 20:00"
-3. **Done loading:** the app shows what's still unticked ("Nog 2: Lichtkist, statief L"), and you finish with **"Alles in de bus"** (or "Vertrekken zonder" with a note). Everything checked out moves to location **"Onderweg – Bruiloft Lisa & Tom"**.
-4. Works **offline** (it's all on the phone); the gig phone (§0.2) holds the list.
+3. **Done loading:** the app shows what's still unticked ("Nog 2: Lichtkist, statief L"), and you finish with **"Alles ingeladen"** (or "Vertrekken zonder" with a note). Everything checked out moves to location **"Onderweg – Bruiloft Lisa & Tom"**.
+4. **Trailer and car:** each line says where it goes: *aanhanger* or *auto* (laptop, controller, laser, headphones, USBs: never in an unattended trailer). The trailer part is sorted in a **load order** you set once per kit (heavy items such as the sub and the rack low and over the axle, the booth last so it comes out first). With a weight per item, the app shows the total load against the trailer's maximum ⚖️ (check your trailer's permitted load and your driving licence: with licence B, car + trailer may usually weigh at most 3,500 kg maximum mass together; heavier combinations need BE or the B+ code 96).
+5. Works **offline** (it's all on the phone); the gig phone (§0.2) holds the list.
 
 ### 1.4 Check-in (after the gig)
 
 1. **Uitladen** on the gig (often at 02:00, so dimmed screen, big buttons). The list shows everything that went out.
 2. Scan everything back (same scan mode). Cases: scan the case, then confirm "inhoud compleet?" (one tap, or tick what's missing).
 3. **Missing items** stay red: *"Ontbreekt: Shure SM58 (FQ-0031)"*. For each one choose:
-   - **Nog in de bus / later** → stays "onderweg", reminder next morning
+   - **Nog in aanhanger/auto / later** → stays "onderweg", reminder next morning
    - **Achtergelaten op locatie** → location "Kasteel Croy", task "Ophalen bij …" with the venue contact from App 1
    - **Kwijt / gestolen** → status *missing*, a checklist for insurance (police report within the insurer's term, §6.1) and a link to the client's liability clause if guests caused it (App 4, clause L2)
    - **Kapot** → opens the issue flow (§1.6) right away
@@ -238,7 +243,7 @@ erDiagram
 | `gearItems` | code (`FQ-0042`, unique), kind (`unique` / `counted` / `container`), name, categoryId, brand, model, serial, quantity (counted), parentId (the container it lives in), owner (`gijs` / `coen` / `shared`), homeLocationId, **currentLocationId**, **status** (`available`, `reserved`, `out`, `out_of_service`, `in_repair`, `lent`, `missing`, `disposed`), purchaseDate, purchasePrice (cents, incl. VAT as paid), supplier, expenseId (App 3), assetId (App 3), warrantyUntil, replacementValue, insured (bool), electrical (`class1` / `class2` / `none`), powerW, usageHours, usageGigs, firmware, notes, completeness (computed: photo/serial/value/receipt) | `currentLocationId` and `status` are derived from movements/issues/rentals but stored for fast lists. |
 | `gearPhotos` | itemId, kind (`main`, `serial`, `receipt`, `damage`, `condition`), blob, sha256, takenAt | Compressed to max ~1600 px like App 3's receipts. |
 | `gearTags` | itemId, type (`qr`, `nfc`), value (the code or a URL), printedAt / writtenAt, active | More than one tag per item (QR + NFC, or a replacement label). A lost label is deactivated, not deleted. |
-| `gearLocations` | name, type (`storage`, `home`, `vehicle`, `venue`, `repair`, `third_party`), venueId (App 1), personId (App 1, for "lent to"), address, notes | Seed: "Opslag Gijs", "Opslag Coen", "Bus". Venues and contacts are reused from App 1, not copied. |
+| `gearLocations` | name, type (`storage`, `home`, `vehicle`, `venue`, `repair`, `third_party`), venueId (App 1), personId (App 1, for "lent to"), address, notes | Seed: "Thuis Gijs", "Thuis Coen", "Aanhanger", "Auto". Venues and contacts are reused from App 1, not copied. |
 
 **Kits and packing**
 
@@ -281,7 +286,7 @@ erDiagram
 
 Same AppShell as apps 1–4: bottom tabs on mobile, sidebar on desktop, NL/EN, dark default. **Scan** is the big orange button in the middle of the mobile tab bar.
 
-**Design rules for a dark venue or van:**
+**Design rules for a dark venue or trailer:**
 - huge targets (≥ 56 px) and one-handed reach
 - 18 px+ text on scan/pack screens
 - sound + vibration on every scan
@@ -306,7 +311,7 @@ Same AppShell as apps 1–4: bottom tabs on mobile, sidebar on desktop, NL/EN, d
 - **Lines grouped by case/container**, then loose items, then counted items. Each line shows: a big tick area, name + code, a reason chip ("offerte", "buiten", "altijd mee"), and a status icon (✓ / ! / ✕).
 - **Order:** where things are (storage first, then home Coen), so you walk once.
 - **Bottom bar:** *Scannen* (primary), *Klaar*. Unticked items stay on top when you press *Klaar*.
-- **Desktop:** an editable table (add from kits/items/categories, swap, quantities), the conflict panel, a print button (an A4 checklist as a paper backup in the van).
+- **Desktop:** an editable table (add from kits/items/categories, swap, quantities), the conflict panel, a print button (an A4 checklist as a paper backup in the car).
 
 ### 3.4 Check-in (`/gear/gigs/:gigId/return`)
 - Like loading, reversed. **Missing items in red at the top**, with the four choices from §1.4 as big buttons. The case-contents check is one tap.
@@ -375,9 +380,9 @@ Same AppShell as apps 1–4: bottom tabs on mobile, sidebar on desktop, NL/EN, d
 ### Later
 - Native NFC on iPhone through the Tauri iOS app (§5.2).
 - OCR of serial plates (re-using App 3's Tesseract setup).
-- Gig-day app (app 6) integration: load-in time and van order, set-up checklist.
+- Gig-day app (app 6) integration: load-in time and trailer load order, set-up checklist.
 - Firmware links per model, manual PDFs per model.
-- Bulk RFID (UHF) for whole-van scanning (probably never worth it at your size, §5.1).
+- Bulk RFID (UHF) for whole-trailer scanning (probably never worth it at your size, §5.1).
 - Depreciation forecasts and "replace soon" hints (age + repairs + usage hours).
 
 ---
@@ -436,7 +441,7 @@ Typical requirements for an equipment/music-gear policy (*apparatuurverzekering*
 | **Photos** of each item, including the serial plate | condition and ownership | photos (main + serial) |
 | **Insured sum = real value** | if you insure too little (*onderverzekering*), a claim can be paid in proportion | warning when replacement value > insured sum |
 | **Business use declared** | home contents insurance usually excludes gear used for paid gigs | policy field + note |
-| **Theft from a vehicle:** conditions such as "locked, out of sight, no cover between 22:00 and 07:00 / overnight", visible break-in marks | the most common exclusion for DJs | policy conditions shown on the loading screen ("niet 's nachts in de bus laten") |
+| **Theft from a vehicle:** conditions such as "locked, out of sight, no cover between 22:00 and 07:00 / overnight", visible break-in marks | the most common exclusion for DJs | policy conditions shown on the loading screen ("niet 's nachts in de aanhanger of auto laten") |
 | **Police report** (*aangifte*) for theft, often within 24–72 h, and prompt notice to the insurer | claim condition | "kwijt/gestolen" checklist (§1.4) |
 | **Coverage area and transport** (NL/Europe, during transport and at venues) | gigs abroad, rental gear | policy field |
 | **Rented-in gear** | often only covered if named or within a limit; the rental company may require its own insurance | rental record + reminder to check |
@@ -446,7 +451,7 @@ Typical requirements for an equipment/music-gear policy (*apparatuurverzekering*
 Also: keep the **yearly export outside the house** (cloud or with family). A fire takes the laptop with the register on it.
 
 **You have no business insurance yet.** That means two open risks:
-- **Your gear:** theft from the van or damage at a gig is fully your own loss. A private home contents policy usually **excludes gear used for paid gigs**, so don't count on it. The app shows the total value at risk on the Gear home screen and in the insurance overview, so you can weigh it against a premium.
+- **Your gear:** theft of the trailer (or from the car) or damage at a gig is fully your own loss. A private home contents policy usually **excludes gear used for paid gigs**, so don't count on it. The app shows the total value at risk on the Gear home screen and in the insurance overview, so you can weigh it against a premium.
 - **Liability:** if a speaker falls on a guest or your gear causes a fire, you are personally liable, and as a VOF or two private persons that's your own money. App 4's contract limits liability "to the price of the gig or what our insurance pays", but a limit doesn't help with personal injury, which can't be excluded towards consumers. Many venues and festivals also ask for proof of an AVB.
 
 My advice: get quotes for a **business liability policy (AVB)** first (usually the cheaper and more important one), then **equipment cover** once the register shows the real value. The insurance export is exactly what an insurer asks for when quoting. The app keeps the policy fields empty until then.
@@ -490,6 +495,17 @@ My advice: get quotes for a **business liability policy (AVB)** first (usually t
   - The Netherlands has no simple national "laser show licence", but venues/municipalities can ask for a **laser safety plan**.
   - Scanning into the audience is only acceptable below the safe exposure limit (MPE), which has to be measured.
   - The app keeps the documents (manual, CE declaration, safety plan template) on the item and reminds you to set the scan area/zones per venue.
+- **Your laser: Laserworld DS-1000 Mark III, class 4.** Class 4 is the highest class: the direct *and* the reflected beam can damage eyes and skin, and it can set fire to flammable material at close range. What the app adds for this item:
+  - a **pre-show checklist** on the gig's packing list (tick in the app, stored per gig as evidence):
+    - beams **well above head height**; a common guideline is at least 3 m above the floor the audience stands on, and never into balconies or a raised stage area with people ⚖️
+    - no audience scanning unless the MPE has been measured for that set-up (normally: don't)
+    - key switch and **emergency stop / interlock** connected and within reach of the DJ
+    - no mirrors, glass or shiny surfaces in the beam path; the venue's no-go zones noted
+    - the laser fixed firmly to the light bar (safety cable), so it can't tilt into the crowd
+  - a **document folder**: manual, CE/conformity declaration, your own short laser safety plan (a one-page template the app fills with venue, mounting height and zones), to hand to a venue or municipality that asks
+  - **use hours** counted from gigs (maintenance: clean the exit window/optics)
+  - transport: in the car, not the trailer (value and fragility), and a flag on the insurance overview because it's one of the most valuable single items
+  - the venue question "lasers toegestaan?" added to the final-check task in App 1 for gigs where the laser is on the packing list
 - **Haze/smoke machines:** fluid type (stored, for the venue's safety data sheet request) and a reminder to **tell the venue** (fire detectors). Add a pack rule "hazer → vloeistof + aanvraag aan locatie" so it's on the gig's checklist.
 - **Generators and power distribution:** an earthing spike and test record. A pack rule for outdoor gigs without venue power.
 
@@ -527,7 +543,7 @@ Gear is the first app where two people really need the same data at the same mom
 
 ## 8. Branding: Funqtion, but readable under pressure
 
-The Gear app is a **work tool at 02:00 in a dark van**. Branding stays in the frame; the lists stay plain.
+The Gear app is a **work tool at 02:00 next to a dark trailer**. Branding stays in the frame; the lists stay plain.
 
 - **Dark by default**, with a **night mode** for scanning: dimmed, low-brightness, no white flashes, amber/red accents only. Light mode for the desk (inventory, insurance).
 - **Orange = action only:** the Scan button, *Inladen*/*Uitladen*, *Klaar*. Never for status, so the one thing to press is always obvious.
@@ -549,20 +565,20 @@ The Gear app is a **work tool at 02:00 in a dark van**. Branding stays in the fr
   - the code in mono under it, optionally an owner initial
   - on cases: "Eigendom van Team Funqtion · FEEL THE MUSIQ · 06-…" (a found case gets returned)
   - the orange colour band goes on the cable or case, not in the QR
-- **Personality** only in empty states and moments: *"Alles terug in de bus. Strak."*, *"Geen keuringen open. FEEL THE MUSIQ."*, and the per-gig "14/14 ✓" moment. Errors stay neutral and precise: *"Ontbreekt: Shure SM58 (FQ-0031) – laatst gescand 21:04 bij inladen."*
+- **Personality** only in empty states and moments: *"Alles terug. Strak."*, *"Geen keuringen open. FEEL THE MUSIQ."*, and the per-gig "14/14 ✓" moment. Errors stay neutral and precise: *"Ontbreekt: Shure SM58 (FQ-0031) – laatst gescand 21:04 bij inladen."*
 
 ---
 
 ## 9. Open questions
 
-Answered: phones (iPhone 15 Pro + 16 Pro), sync (one gig phone), where gear lives (both homes + a van), labels (A4 sheets), safety tests (not now), rentals (rarely), insurance (none yet). Still open:
+Answered: phones (iPhone 15 Pro + 16 Pro), sync (one gig phone), where gear lives (both homes; trailer + personal car), gig phone (per gig, any of you), ownership (mixed), standard set-up, laser (Laserworld DS-1000 Mk III, class 4), labels (A4 sheets), safety tests (not now), rentals (rarely), insurance (none yet). Still open:
 
 1. **The real gear list:** replace the placeholder in [`gear-list.csv`](gear-list.csv). Any form is fine; Claude converts it.
-2. **The van:** do you own or lease it, or rent one per gig? (Rented per gig → the van is a per-gig location, and its cost goes to App 3 as a gig expense.)
-3. **The gig phone:** is it always the phone of the gig's owner (App 1), or do you pick per gig?
-4. **Ownership:** which gear is Gijs's, Coen's or shared? Should personal gear used at gigs earn a rental fee in the partner split (App 3), or is that out of scope?
-5. **Kits:** what are your standard set-ups (e.g. "DJ only", "Sound klein", "Sound groot", "Licht basis", "Laser")? And which App 2 products need which kit?
+2. **The trailer:** its permitted maximum load (kg), and does it have a lock (hitch lock / wheel clamp)? Is it ever left loaded overnight (e.g. after a late gig)? That's the biggest theft risk without insurance.
+3. **Ownership per item:** who owns what? Easiest is to add it per line when you send the real list.
+4. **The light & sound rack:** what's in it (amplifier, power distribution, wireless mic, DMX interface)? It becomes a container with its contents listed.
+5. **DJ only kit:** for venues with their own PA, do you bring only the controller, or also the booth and the light bar?
 6. **Aluminium tags** for the most expensive gear (in addition to the A4 labels), or labels only?
-7. **Lasers and effects:** which laser(s) do you have (class, power), and do venues ask you for laser/haze documents?
+7. **Laser use:** do you scan into the audience, or only above heads? Do venues ask you for laser documents? Any haze/smoke machine as well?
 8. **Existing gear in the books:** has the gear been contributed to the business in App 3 yet (App 3 Q7)? The gear register can be the starting point for that contribution list.
 9. **Maintenance:** which recurring checks do you already do (cable tests, laser cleaning, firmware updates), and how often?
