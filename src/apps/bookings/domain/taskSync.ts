@@ -15,11 +15,12 @@ export function runTaskSync(now = new Date()): Promise<void> {
 
 async function sync(now: Date) {
   const settings = (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
-  const [gigs, enquiries, quotes, reviews, tasks, invoices, payments, contracts] = await Promise.all([
+  const [gigs, enquiries, quotes, reviews, tasks, invoices, payments, contracts, gearItems, packLists, gearRentals] = await Promise.all([
     db.gigs.toArray(), db.enquiries.toArray(), db.quotes.toArray(), db.reviews.toArray(), db.tasks.toArray(),
-    db.invoices.toArray(), db.payments.toArray(), db.contracts.toArray(),
+    db.invoices.toArray(), db.payments.toArray(), db.contracts.toArray(), db.gearItems.toArray(), db.packLists.toArray(), db.gearRentals.toArray(),
   ]);
-  const desired = desiredTasks({ gigs: alive(gigs), enquiries: alive(enquiries), quotes, reviews, invoices: alive(invoices), payments: alive(payments), contracts: alive(contracts) },
+  const desired = desiredTasks({ gigs: alive(gigs), enquiries: alive(enquiries), quotes, reviews, invoices: alive(invoices), payments: alive(payments), contracts: alive(contracts),
+    gear: { items: alive(gearItems), lists: alive(packLists), rentals: alive(gearRentals) } },
     { ...DEFAULT_SETTINGS, ...settings }, now);
   const plan = planTaskSync(desired, tasks);
   for (const d of plan.create) {

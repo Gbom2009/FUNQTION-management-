@@ -3,6 +3,7 @@ import type {
   Asset, AuditEntry, AvailabilityBlock, BankAccount, BankLine, BankRule, Category, Enquiry, Expense, HourEntry, PartnerEntry, Receipt, Trip, VatPeriod, Gig, Interaction, Invoice, Member, Organisation, Package, Payment, Person,
   Product, Quote, Review, Settings, StatusChange, Task, Template, Venue,
   Clause, Contract, ContractEvent, ContractSignature, ContractTemplate, ContractVersion, Rider,
+  GearIssue, GearItem, GearKit, GearLocation, GearMovement, GearPhoto, GearRental, MaintenanceLog, MaintenancePlan, PackList, SafetyTest, WishItem,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -49,6 +50,19 @@ export class FunqtionDB extends Dexie {
   contractVersions!: Table<ContractVersion, string>;
   contractSignatures!: Table<ContractSignature, string>;
   contractEvents!: Table<ContractEvent, string>;
+  // app 5: Gear & Inventory
+  gearItems!: Table<GearItem, string>;
+  gearPhotos!: Table<GearPhoto, string>;
+  gearLocations!: Table<GearLocation, string>;
+  gearKits!: Table<GearKit, string>;
+  packLists!: Table<PackList, string>;
+  gearMovements!: Table<GearMovement, string>;
+  gearIssues!: Table<GearIssue, string>;
+  maintenancePlans!: Table<MaintenancePlan, string>;
+  maintenanceLogs!: Table<MaintenanceLog, string>;
+  safetyTests!: Table<SafetyTest, string>;
+  gearRentals!: Table<GearRental, string>;
+  wishlist!: Table<WishItem, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -101,6 +115,21 @@ export class FunqtionDB extends Dexie {
       contractSignatures: 'id, contractId, versionId, updatedAt',
       contractEvents: 'id, contractId, at, updatedAt',
     });
+    // App 5 – Gear & Inventory.
+    this.version(5).stores({
+      gearItems: 'id, &code, category, status, owner, parentId, updatedAt',
+      gearPhotos: 'id, itemId, updatedAt',
+      gearLocations: 'id, key, updatedAt',
+      gearKits: 'id, role, updatedAt',
+      packLists: 'id, &gigId, status, updatedAt',
+      gearMovements: 'id, itemId, gigId, at, updatedAt',
+      gearIssues: 'id, itemId, status, updatedAt',
+      maintenancePlans: 'id, itemId, updatedAt',
+      maintenanceLogs: 'id, itemId, planId, updatedAt',
+      safetyTests: 'id, itemId, updatedAt',
+      gearRentals: 'id, gigId, updatedAt',
+      wishlist: 'id, updatedAt',
+    });
   }
 }
 
@@ -118,5 +147,7 @@ export const DATA_TABLES = [
   'availability', 'tasks', 'interactions', 'templates', 'reviews', 'invoices', 'payments', 'packages',
   'categories', 'expenses', 'receipts', 'bankAccounts', 'bankLines', 'bankRules', 'trips', 'hours', 'assets', 'partnerEntries', 'vatPeriods',
   'clauses', 'contractTemplates', 'riders', 'contracts', 'contractVersions', 'contractSignatures', 'contractEvents',
+  'gearItems', 'gearPhotos', 'gearLocations', 'gearKits', 'packLists', 'gearMovements', 'gearIssues', 'maintenancePlans', 'maintenanceLogs',
+  'safetyTests', 'gearRentals', 'wishlist',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

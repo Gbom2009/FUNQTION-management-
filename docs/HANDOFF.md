@@ -14,6 +14,8 @@ Short report for the next Claude Code session on this repo. The original prompts
 | Money | Bank probably **Revolut**. Profit split **50/50 but adjustable** (dated rules, fixed % or by lineup). Both have **jobs**, so hours tracking is light. |
 | Sensitive data | The **IBAN** is entered by the user on the device (Settings), never in code or on GitHub. They own a domain, which isn't used yet. |
 | Contracts | Built in local mode (v0.4.0). Quote + contract **per event type** (together / after quote / none). **Softer consumer cancellation scale**. **Automatic countersigning**. Photo/video **opt-out**. Details at the top of `docs/contracts/PLAN.md`. |
+| Gear (app 5) | **One gig phone** per gig (no sync yet). Both phones are **iPhones** → QR only. Gear at **both homes**; transport by **personal car + trailer** (no van). Gig phone chosen **per gig**. Ownership **mixed** (Gijs / Coen / shared). Standard set: all-in-one controller, light bar with Gijs's **Laserworld DS-1000 Mk III (class 4)**, 2 tops, 1 sub, DJ booth, light & sound rack. **A4** weatherproof labels. Safety tests **off for now**. Rentals **rare**. **No business insurance** yet. Temporary gear list: `docs/gear-inventory/gear-list.csv` (replace when Gijs sends the real list; format in `GEAR-LIST.md`). |
+| Gear details | Trailer **750 kg** max (no own registration), no trailer lock, **hitch lock** when unattended, never left loaded overnight. DJ-only set-ups vary per venue (controller / USB / controller + light). Laser above heads; audience scanning only at private parties **with permission** (recorded per gig). |
 | Terms | Gijs asked for draft general terms: `docs/legal/ALGEMENE-VOORWAARDEN.md` and `src/apps/invoicing/terms.ts`. **Draft, not legally reviewed.** |
 
 ## 2. Still unanswered / to do
@@ -23,7 +25,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **Navigation app:** how it's built is unknown (asked twice). Trips use manual km plus a per-venue memory.
 - **Existing gear list** (for investments/assets) and **real price list** not given. The seeded prices (e.g. €150/h DJ set) are placeholders.
 - Items marked ⚖️ in the plans (9% vs 21% VAT for DJ sets, VAT on cancellation fees, deductions) need an accountant **once they register**.
-- App 4 (Contracts) is built in local mode. Not done: online signing relay, automatic e-mail, the remaining open questions in `docs/contracts/PLAN.md` §11 (rider contents, insurance, legal names, lawyer review). Existing devices keep their stored terms text: App 2 settings shows a button to take over version 2026-12. Apps 5–8 (gig-day, gear, portal, navigation link) aren't started. No sync server yet.
+- App 4 (Contracts) is built in local mode. Not done: online signing relay, automatic e-mail, the remaining open questions in `docs/contracts/PLAN.md` §11 (rider contents, insurance, legal names, lawyer review). Existing devices keep their stored terms text: App 2 settings shows a button to take over version 2026-12. App 5 (Gear & Inventory) is built in local mode (v0.5.0). Its gear list `docs/gear-inventory/gear-list.csv` is still partly a placeholder, and the rack contents (`RACK-CONTENTS.md`) are open; update both when Gijs sends them. Apps 6–8 (gig-day, portal, navigation link) aren't started. No sync server yet.
 
 ## 3. Conventions in the code
 

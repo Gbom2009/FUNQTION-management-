@@ -8,6 +8,7 @@ import InvoicingApp from './apps/invoicing/InvoicingApp';
 import MoneyApp from './apps/money/MoneyApp';
 import ContractsApp from './apps/contracts/ContractsApp';
 import SignHere from './apps/contracts/pages/SignHere';
+import GearApp from './apps/gear/GearApp';
 import Settings from './settings/Settings';
 
 function Gate() {
@@ -21,6 +22,7 @@ function Gate() {
       <Route path="/money/*" element={<MoneyApp />} />
       <Route path="/contracts/:id/sign" element={<SignHere />} />
       <Route path="/contracts/*" element={<ContractsApp />} />
+      <Route path="/gear/*" element={<GearApp />} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -272,6 +272,8 @@ export interface Product extends Base {
   vatRate: number;
   optionalByDefault?: boolean;
   active: boolean;
+  /** App 5: gear kits this product needs on the packing list. */
+  kitIds?: ID[];
 }
 
 export interface Package extends Base {
@@ -342,6 +344,7 @@ export const TASK_KINDS = [
   'reply_enquiry', 'follow_up_quote', 'quote_expiry', 'option_expiry', 'music_wishes', 'final_check',
   'gear_check', 'mark_played', 'invoice', 'payment', 'review_request', 'rebook', 'dunning', 'custom',
   'contract_review', 'contract_reminder', 'contract_expired', 'contract_deposit',
+  'gear_missing', 'gear_return',
 ] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 
@@ -458,6 +461,15 @@ export interface Settings {
   contractAutoCountersign: boolean;
   overtimeRateHalfHour: number;    // cents per started half hour
   memberSignatures?: Partial<Record<MemberId, string>>; // PNG data URL, drawn once per member, device only
+  // ---- Gear & Inventory (app 5) ----
+  gearTrailerMaxKg: number;        // maximum mass of the trailer (incl. its own weight)
+  gearTrailerEmptyKg?: number;     // empty weight → payload = max - empty
+  gearBufferMinutes: number;       // reservation buffer before/after a gig (load, travel)
+  gearSafetyTests: boolean;        // NEN 3140 tests on/off
+  gearSafetyMonths: number;
+  gearSafetyMonthsPower: number;   // extension cables, power strips, distribution
+  gearInsurer?: string;            // empty = not insured
+  gearInsuredSum?: number;         // cents
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -510,6 +522,11 @@ export const DEFAULT_SETTINGS: Settings = {
   contractReminderDays: 3,
   contractAutoCountersign: true,
   overtimeRateHalfHour: 7500,
+  gearTrailerMaxKg: 750,
+  gearBufferMinutes: 120,
+  gearSafetyTests: false,
+  gearSafetyMonths: 12,
+  gearSafetyMonthsPower: 6,
 };
 
 // ---- App 3: Money & Accounting ------------------------------------------------
@@ -809,4 +826,184 @@ export interface ContractEvent extends Base {
     | 'withdrawn' | 'cancelled' | 'copy_sent' | 'deposit_invoice' | 'conflict';
   at: string;
   note?: string;
+}
+
+// ---- App 5: Gear & Inventory ------------------------------------------------
+
+export const GEAR_CATEGORIES = [
+  'decks', 'mixers', 'laptops', 'headphones', 'speakers', 'subs', 'monitors', 'lighting', 'lasers', 'effects', 'dmx',
+  'power', 'audio_cables', 'stands', 'cases', 'furniture', 'tools', 'small',
+] as const;
+export type GearCategory = (typeof GEAR_CATEGORIES)[number];
+/** unique = own tag; counted = quantity without a tag per piece; container = case/bag/rack, scanning it ticks off its contents. */
+export type GearKind = 'unique' | 'counted' | 'container';
+export type GearOwner = MemberId | 'shared' | 'unknown';
+export type GearStatus = 'available' | 'out' | 'out_of_service' | 'in_repair' | 'lent' | 'missing' | 'disposed';
+export type GearTransport = 'trailer' | 'car';
+
+export interface GearLocation extends Base {
+  key?: string;              // seeded: home_gijs, home_coen, trailer, car
+  name: string;
+  type: 'home' | 'storage' | 'vehicle' | 'venue' | 'repair' | 'third_party' | 'on_the_road';
+  venueId?: ID;
+  note?: string;
+}
+
+export interface GearItem extends Base {
+  code: string;              // FQ-0042, printed under the QR code
+  kind: GearKind;
+  name: string;
+  category: GearCategory;
+  brand?: string;
+  model?: string;
+  serial?: string;
+  quantity: number;          // counted items; 1 otherwise
+  owner: GearOwner;
+  homeLocationId?: ID;
+  locationId?: ID;           // where it is now
+  parentId?: ID;             // container it normally lives in
+  status: GearStatus;
+  transport: GearTransport;
+  weightKg?: number;
+  purchaseDate?: string;
+  purchasePrice?: number;    // cents, as paid
+  replacementValue?: number; // cents, new price today
+  supplier?: string;
+  expenseId?: ID;            // App 3 purchase
+  assetId?: ID;              // App 3 depreciation
+  warrantyUntil?: string;
+  electrical: 'class1' | 'class2' | 'none';
+  powerW?: number;
+  usageHours: number;
+  usageGigs: number;
+  firmware?: string;
+  laserClass?: string;
+  notes?: string;
+}
+
+export interface GearPhoto extends Base {
+  itemId: ID;
+  kind: 'main' | 'serial' | 'receipt' | 'damage';
+  mime: string;
+  blob: Blob;
+}
+
+export const KIT_ROLES = ['standard', 'dj_controller', 'dj_usb', 'dj_light', 'always', 'outdoor', 'custom'] as const;
+export type KitRole = (typeof KIT_ROLES)[number];
+
+export interface GearKit extends Base {
+  name: string;
+  role: KitRole;
+  lines: { itemId: ID; qty: number }[];
+  note?: string;
+}
+
+export interface PackLine {
+  id: ID;
+  itemId: ID;
+  qty: number;
+  source: 'kit' | 'quote' | 'always' | 'outdoor' | 'manual';
+  reason: string;
+  out: number;               // checked out
+  back: number;              // checked back in
+  missing?: 'later' | 'venue' | 'lost' | 'broken';
+}
+
+export interface PackList extends Base {
+  gigId: ID;
+  status: 'draft' | 'confirmed' | 'loading' | 'out' | 'done';
+  setup: KitRole;            // base kit for this gig (standard or a DJ-only variant)
+  phone?: MemberId;          // the gig phone: who loads/unloads
+  lines: PackLine[];
+  loadedAt?: string;
+  returnedAt?: string;
+  laser?: { checks: Record<string, boolean>; crowdScan: boolean; permissionBy?: string; at?: string };
+  trailer?: { empty: boolean; hitchLock: boolean };
+  note?: string;
+}
+
+export interface GearMovement extends Base {
+  itemId: ID;
+  qty: number;
+  type: 'check_out' | 'check_in' | 'move' | 'lend_out' | 'return' | 'to_repair' | 'from_repair' | 'missing' | 'found' | 'dispose';
+  gigId?: ID;
+  rentalId?: ID;
+  toLocationId?: ID;
+  at: string;
+  method: 'scan' | 'manual';
+  note?: string;
+}
+
+export interface GearIssue extends Base {
+  itemId: ID;
+  gigId?: ID;
+  title: string;
+  description?: string;
+  severity: 'minor' | 'out_of_service';
+  causedByGuests?: boolean;
+  status: 'open' | 'in_repair' | 'resolved' | 'written_off';
+  repairBy?: string;
+  sentAt?: string;
+  expectedBack?: string;
+  resolvedAt?: string;
+  work?: string;
+  cost?: number;             // cents
+  expenseId?: ID;
+}
+
+export interface MaintenancePlan extends Base {
+  itemId?: ID;               // one item…
+  category?: GearCategory;   // …or every item in a category
+  title: string;
+  trigger: 'days' | 'hours' | 'gigs';
+  interval: number;
+  instructions?: string;
+  active: boolean;
+}
+
+export interface MaintenanceLog extends Base {
+  planId?: ID;
+  itemId: ID;
+  doneAt: string;            // yyyy-mm-dd
+  result: 'ok' | 'issue';
+  usageHours: number;
+  usageGigs: number;
+  note?: string;
+}
+
+export interface SafetyTest extends Base {
+  itemId: ID;
+  date: string;
+  inspector: string;
+  passed: boolean;
+  labelNo?: string;
+  nextDue: string;
+  note?: string;
+}
+
+export interface GearRental extends Base {
+  direction: 'in' | 'out';
+  party: string;
+  personId?: ID;
+  gigId?: ID;
+  lines: { itemId?: ID; description: string; qty: number }[];
+  from: string;
+  until: string;
+  returnedAt?: string;
+  price?: number;            // cents
+  deposit?: number;
+  expenseId?: ID;
+  note?: string;
+}
+
+export interface WishItem extends Base {
+  name: string;
+  category?: GearCategory;
+  link?: string;
+  price?: number;            // cents
+  priority: 'must' | 'nice' | 'dream';
+  for: GearOwner;
+  reason?: string;
+  status: 'idea' | 'saving' | 'ordered' | 'bought' | 'dropped';
+  boughtItemId?: ID;
 }
