@@ -6,7 +6,7 @@ import {
   applyScan, defaultSetup, gearConflicts, generateLines, insuranceTotals, itemsFromCsv, itemsToCsv, loadByTransport, maintenanceDue, mergeLines, nextCode, normaliseCode,
   parseCsv, progress, safetyDue, trailerPayload,
 } from './gear';
-import { insuranceList, labelSheet } from './pdfDocs';
+import { insuranceList, labelSheets } from './pdfDocs';
 
 const base = { createdAt: '2026-01-01T00:00:00.000Z', createdBy: 'gijs' as const, updatedAt: '', updatedBy: 'gijs' as const };
 const item = (id: string, p: Partial<GearItem> = {}): GearItem => ({
@@ -163,7 +163,9 @@ function render(def: unknown): Promise<Buffer> {
 describe('gear pdfs', () => {
   it('renders QR label sheets and the insurance list', async () => {
     const items = Array.from({ length: 23 }, (_, i) => item(String(i + 1), { name: `Item met een vrij lange naam ${i + 1}` }));
-    for (const size of ['small', 'large'] as const) expect((await render(labelSheet(items, size, 'Eigendom van Team Funqtion'))).subarray(0, 4).toString()).toBe('%PDF');
+    const bars = Object.fromEntries(items.map((i) => [i.code, { modules: 20, bars: [[0, 2], [3, 1], [6, 3]] as [number, number][] }]));
+    const sheet = await render(labelSheets([{ type: 'qr_large', items: items.slice(0, 3) }, { type: 'qr_small', items: items.slice(3, 9) }, { type: 'barcode', items: items.slice(9) }], 'Eigendom van Team Funqtion', bars));
+    expect(sheet.subarray(0, 4).toString()).toBe('%PDF');
     const pdf = await render(insuranceList(items.map((i) => ({ item: { ...i, purchasePrice: 10000 }, locationName: 'Thuis Gijs', hasPhoto: true, hasReceipt: false })), { lang: 'nl', businessName: 'Team Funqtion', date: '2026-11-07', total: 230000 }));
     expect(pdf.length).toBeGreaterThan(1000);
   });

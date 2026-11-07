@@ -1,5 +1,5 @@
 import type {
-  GearCategory, GearItem, GearKind, GearKit, GearOwner, GearTransport, Gig, KitRole, MaintenanceLog, MaintenancePlan, PackLine, PackList, Product, Quote,
+  GearCategory, GearItem, GearKind, GearKit, GearOwner, GearTransport, Gig, KitRole, LabelType, MaintenanceLog, MaintenancePlan, PackLine, PackList, Product, Quote,
   SafetyTest, Settings, Venue,
 } from '../../../core/types';
 import { GEAR_CATEGORIES, KIT_ROLES } from '../../../core/types';
@@ -24,6 +24,67 @@ export function normaliseCode(raw: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Tree: cases hold items, and cases can sit in other cases (a rack in a trailer box)
+
+type TreeItem = Pick<GearItem, 'id' | 'parentId'>;
+
+/** Everything inside an item, at any depth (cycle-safe). */
+export function descendants(id: string, items: TreeItem[]): string[] {
+  const kids = new Map<string, string[]>();
+  for (const i of items) if (i.parentId) kids.set(i.parentId, [...(kids.get(i.parentId) ?? []), i.id]);
+  const out: string[] = []; const seen = new Set([id]); const stack = [...(kids.get(id) ?? [])];
+  while (stack.length) {
+    const c = stack.pop()!;
+    if (seen.has(c)) continue;
+    seen.add(c); out.push(c);
+    stack.push(...(kids.get(c) ?? []));
+  }
+  return out;
+}
+
+/** True when putting `itemId` inside `parentId` would make a loop (a case inside itself). */
+export function wouldCycle(itemId: string, parentId: string | undefined, items: TreeItem[]) {
+  return !!parentId && (parentId === itemId || descendants(itemId, items).includes(parentId));
+}
+
+/** Path from the top: [outermost case, …, item]. */
+export function ancestry(id: string, items: TreeItem[]): string[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const path = [id]; const seen = new Set([id]);
+  let cur = byId.get(id)?.parentId;
+  while (cur && !seen.has(cur)) { path.unshift(cur); seen.add(cur); cur = byId.get(cur)?.parentId; }
+  return path;
+}
+
+/** Lines in tree order with their depth: a case, then what's in it (indented). */
+export function treeLines(lines: PackLine[], items: Pick<GearItem, 'id' | 'parentId' | 'name'>[]): { line: PackLine; depth: number }[] {
+  const byItem = new Map(lines.map((l) => [l.itemId, l]));
+  const meta = new Map(items.map((i) => [i.id, i]));
+  const onListParent = (l: PackLine) => { const p = meta.get(l.itemId)?.parentId; return p && byItem.has(p) ? p : undefined; };
+  const kids = new Map<string, PackLine[]>();
+  const roots: PackLine[] = [];
+  for (const l of lines) { const p = onListParent(l); if (p) kids.set(p, [...(kids.get(p) ?? []), l]); else roots.push(l); }
+  const name = (l: PackLine) => meta.get(l.itemId)?.name ?? '';
+  const out: { line: PackLine; depth: number }[] = [];
+  const seen = new Set<string>();
+  const walk = (l: PackLine, depth: number) => {
+    if (seen.has(l.id)) return;
+    seen.add(l.id); out.push({ line: l, depth });
+    for (const k of (kids.get(l.itemId) ?? []).sort((a, b) => name(a).localeCompare(name(b)))) walk(k, depth + 1);
+  };
+  for (const r of roots) walk(r, 0);
+  for (const l of lines) if (!seen.has(l.id)) out.push({ line: l, depth: 0 }); // cycles: show flat
+  return out;
+}
+
+/** Sensible default label: barcodes for cables (they wrap around), big QR for cases and big gear. */
+export function defaultLabelType(it: Pick<GearItem, 'category' | 'kind'>): LabelType {
+  if (['audio_cables', 'power', 'dmx'].includes(it.category)) return 'barcode';
+  if (it.kind === 'container' || ['cases', 'speakers', 'subs', 'lighting', 'furniture', 'stands'].includes(it.category)) return 'qr_large';
+  return 'qr_small';
+}
+
+// ---------------------------------------------------------------------------
 // Packing list
 
 export interface PackInput {
@@ -32,7 +93,7 @@ export interface PackInput {
   quote?: Pick<Quote, 'lines'>;
   products: Pick<Product, 'id' | 'kitIds'>[];
   kits: GearKit[];
-  items: Pick<GearItem, 'id' | 'status' | 'kind' | 'quantity'>[];
+  items: Pick<GearItem, 'id' | 'status' | 'kind' | 'quantity' | 'parentId' | 'name'>[];
 }
 
 /** Venue with its own sound, or no build-up → a DJ-only variant; otherwise the full standard set. */
@@ -65,13 +126,22 @@ export function generateLines(inp: PackInput, setup: KitRole, uid: () => string)
   }
   if (isOutdoorGig(inp.gig)) add(kitOf('outdoor'), 'outdoor', kitOf('outdoor')?.name ?? 'outdoor');
   add(kitOf('always'), 'always', kitOf('always')?.name ?? 'always');
+  // A case on the list brings what's in it (at any depth).
+  for (const l of [...byItem.values()]) {
+    for (const d of descendants(l.itemId, inp.items)) {
+      const it = usable.get(d);
+      if (!it || byItem.has(d)) continue;
+      const parent = inp.items.find((x) => x.id === it.parentId);
+      byItem.set(d, { id: uid(), itemId: d, qty: it.kind === 'counted' ? it.quantity : 1, source: l.source, reason: `in ${parent?.name ?? ''}`.trim(), out: 0, back: 0 });
+    }
+  }
   return [...byItem.values()];
 }
 
 /** Re-generate but keep manual lines and scan progress of lines that stay. */
 export function mergeLines(old: PackLine[], fresh: PackLine[]): PackLine[] {
   const byItem = new Map(old.map((l) => [l.itemId, l]));
-  const out = fresh.map((l) => { const o = byItem.get(l.itemId); return o ? { ...l, id: o.id, out: o.out, back: o.back, missing: o.missing } : l; });
+  const out = fresh.map((l) => { const o = byItem.get(l.itemId); return o ? { ...l, id: o.id, out: o.out, back: o.back, missing: o.missing, skip: o.skip } : l; });
   for (const o of old) if (o.source === 'manual' && !out.some((l) => l.itemId === o.itemId)) out.push(o);
   return out;
 }
@@ -79,7 +149,7 @@ export function mergeLines(old: PackLine[], fresh: PackLine[]): PackLine[] {
 export interface PackProgress { lines: number; done: number; pieces: number; piecesDone: number }
 
 export function progress(lines: PackLine[], phase: 'out' | 'back'): PackProgress {
-  const relevant = phase === 'out' ? lines : lines.filter((l) => l.out > 0);
+  const relevant = phase === 'out' ? lines.filter((l) => !l.skip) : lines.filter((l) => l.out > 0);
   const target = (l: PackLine) => (phase === 'out' ? l.qty : l.out);
   return {
     lines: relevant.length,
@@ -96,22 +166,24 @@ export type ScanOutcome =
   | { kind: 'blocked'; reason: 'out_of_service' | 'in_repair' | 'lent' | 'missing' | 'disposed' };
 
 /**
- * Apply a scan to a packing list. Scanning a container also ticks off the
- * listed items that live in it. Counted items are ticked fully (adjust by hand).
+ * Apply a scan to a packing list.
+ * - group mode: scanning a case also ticks off everything in it (`contents`) that is on the list and taken;
+ * - each mode: only the scanned item itself (unload: every piece is checked).
+ * Scanning an item marked "not taken" means you take it after all. Counted items are ticked fully (adjust by hand).
  */
-export function applyScan(list: PackLine[], item: Pick<GearItem, 'id' | 'status'>, contents: string[], phase: 'out' | 'back'): { lines: PackLine[]; outcome: ScanOutcome } {
+export function applyScan(list: PackLine[], item: Pick<GearItem, 'id' | 'status'>, contents: string[], phase: 'out' | 'back', group = true): { lines: PackLine[]; outcome: ScanOutcome } {
   if (phase === 'out' && ['out_of_service', 'in_repair', 'lent', 'missing', 'disposed'].includes(item.status)) {
     return { lines: list, outcome: { kind: 'blocked', reason: item.status as Extract<ScanOutcome, { kind: 'blocked' }>['reason'] } };
   }
-  const ids = new Set([item.id, ...contents]);
+  const inside = new Set(group ? contents : []);
   const target = (l: PackLine) => (phase === 'out' ? l.qty : l.out);
-  const hit = list.filter((l) => ids.has(l.itemId) && (phase === 'out' || l.out > 0));
+  const hit = list.filter((l) => (l.itemId === item.id || (inside.has(l.itemId) && !l.skip)) && (phase === 'out' || l.out > 0));
   if (!hit.length) return { lines: list, outcome: { kind: 'not_on_list' } };
   const open = hit.filter((l) => l[phase] < target(l));
   if (!open.length) return { lines: list, outcome: { kind: 'already', lineId: hit[0].id } };
   const openIds = new Set(open.map((l) => l.id));
   return {
-    lines: list.map((l) => (openIds.has(l.id) ? { ...l, [phase]: target(l), missing: phase === 'back' ? undefined : l.missing } : l)),
+    lines: list.map((l) => (openIds.has(l.id) ? { ...l, [phase]: target(l), skip: false, missing: phase === 'back' ? undefined : l.missing } : l)),
     outcome: { kind: 'ticked', lineIds: [...openIds] },
   };
 }
@@ -141,7 +213,8 @@ export function gearConflicts(
       const A = live[a]; const B = live[b];
       if (!rangesOverlap(A.w.from, A.w.to, B.w.from, B.w.to)) continue;
       for (const la of A.list.lines) {
-        const lb = B.list.lines.find((x) => x.itemId === la.itemId);
+        if (la.skip) continue;
+        const lb = B.list.lines.find((x) => x.itemId === la.itemId && !x.skip);
         if (!lb) continue;
         const have = qty.get(la.itemId) ?? 1;
         const need = la.qty + lb.qty;
@@ -164,7 +237,7 @@ export function loadByTransport(lines: PackLine[], items: Pick<GearItem, 'id' | 
   const out = { trailerKg: 0, carKg: 0, unknownWeight: 0 };
   for (const l of lines) {
     const it = byId.get(l.itemId);
-    if (!it) continue;
+    if (!it || l.skip) continue;
     if (it.weightKg == null) { out.unknownWeight++; continue; }
     const kg = it.weightKg * (it.kind === 'counted' ? l.qty : 1);
     if (it.transport === 'car') out.carKg += kg; else out.trailerKg += kg;
@@ -250,7 +323,7 @@ export function insuranceTotals(items: GearItem[]) {
 // CSV (docs/gear-inventory/gear-list.csv)
 
 export const CSV_COLUMNS = ['code', 'kind', 'name', 'category', 'brand', 'model', 'serial', 'quantity', 'owner', 'home_location', 'container', 'transport', 'weight_kg',
-  'purchase_date', 'purchase_price_eur', 'replacement_value_eur', 'electrical', 'power_w', 'kits', 'notes'] as const;
+  'purchase_date', 'purchase_price_eur', 'replacement_value_eur', 'electrical', 'power_w', 'kits', 'notes', 'label'] as const;
 
 export function parseCsv(text: string): Record<string, string>[] {
   const rows: string[][] = [];
@@ -293,6 +366,7 @@ export function itemsFromCsv(rows: Record<string, string>[]): CsvItem[] {
       purchasePrice: euroToCents(r.purchase_price_eur), replacementValue: euroToCents(r.replacement_value_eur),
       electrical: oneOf(r.electrical, ['class1', 'class2', 'none'] as const, 'none'), powerW: num(r.power_w), usageHours: 0, usageGigs: 0,
       notes: r.notes || undefined,
+      labelType: (['qr_large', 'qr_small', 'barcode'] as const).find((x) => x === r.label),
     },
     homeKey: ['home_gijs', 'home_coen', 'trailer', 'car'].includes(r.home_location) ? r.home_location : undefined,
     containerCode: /^FQ-\d+$/i.test(r.container ?? '') ? r.container.toUpperCase() : undefined,
@@ -308,7 +382,7 @@ export function itemsToCsv(items: GearItem[], kits: GearKit[], ctx: { locationKe
     const roles = kits.filter((k) => !k.deletedAt && k.lines.some((l) => l.itemId === i.id)).map((k) => k.role).filter((r) => r !== 'custom');
     lines.push([i.code, i.kind, i.name, i.category, i.brand, i.model, i.serial, i.quantity, i.owner, ctx.locationKey(i.homeLocationId), ctx.codeOf(i.parentId), i.transport, i.weightKg,
       i.purchaseDate, i.purchasePrice != null ? (i.purchasePrice / 100).toFixed(2) : '', i.replacementValue != null ? (i.replacementValue / 100).toFixed(2) : '',
-      i.electrical, i.powerW, [...new Set(roles)].join(';'), i.notes].map(csvCell).join(','));
+      i.electrical, i.powerW, [...new Set(roles)].join(';'), i.notes, i.labelType].map(csvCell).join(','));
   }
   return lines.join('\n') + '\n';
 }

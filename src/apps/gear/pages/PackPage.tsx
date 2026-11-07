@@ -12,7 +12,7 @@ import {
   addLine, allConflicts, finishLoading, finishReturn, getOrCreatePackList, regenerate, savePackList, scanInto, useGearItems, useGearLocations, type MissingAction,
 } from '../data';
 import { Scanner, StatusPill, feedback, useNightMode } from '../components';
-import { loadByTransport, progress, trailerPayload, type GearConflict } from '../domain/gear';
+import { loadByTransport, progress, trailerPayload, treeLines, type GearConflict } from '../domain/gear';
 
 type Mode = 'edit' | 'out' | 'back';
 const SETUPS = ['standard', 'dj_controller', 'dj_usb', 'dj_light'] as const satisfies readonly KitRole[];
@@ -23,7 +23,7 @@ export default function PackPage() {
   const [params, setParams] = useSearchParams();
   const { t, lang } = useI18n();
   const toast = useToast();
-  const { me, members, settings } = useSession();
+  const { me, members, settings, updateSettings } = useSession();
   const gig = useLiveQuery(() => db.gigs.get(gigId!), [gigId]);
   const venue = useLiveQuery(() => (gig?.venueId ? db.venues.get(gig.venueId) : undefined), [gig?.venueId]);
   const stored = useLiveQuery(() => db.packLists.where('gigId').equals(gigId!).first(), [gigId]);
@@ -48,25 +48,34 @@ export default function PackPage() {
   const save = (p: Partial<PackList>) => savePackList({ ...list, ...p });
   const setLine = (id: string, p: Partial<PackLine>) => save({ lines: list.lines.map((l) => (l.id === id ? { ...l, ...p } : l)) });
 
+  const scanKey = phase === 'out' ? 'gearLoadScan' : 'gearUnloadScan';
+  const group = settings[scanKey] === 'group';
   async function onScan(code: string) {
-    const r = await scanInto(list, code, phase);
+    const r = await scanInto(list, code, phase, group);
     const name = r.item ? `${r.item.code} ${r.item.name}` : code;
     if (r.outcome.kind === 'ticked') { feedback(true); setLast({ ok: true, text: `✓ ${name}${r.outcome.lineIds.length > 1 ? ` (+${r.outcome.lineIds.length - 1})` : ''}` }); }
     else if (r.outcome.kind === 'already') { feedback(true); setLast({ ok: true, text: t('g.already', { name }) }); }
     else if (r.outcome.kind === 'not_on_list' && r.item && phase === 'out') {
       feedback(false);
-      if (window.confirm(t('g.notOnListAdd', { name }))) { const l = await addLine(list, r.item.id, 1, t('g.addedAtLoading')); await scanInto(l, code, 'out'); }
+      if (window.confirm(t('g.notOnListAdd', { name }))) { const l = await addLine(list, r.item.id, 1, t('g.addedAtLoading')); await scanInto(l, code, 'out', group); }
     } else if (r.outcome.kind === 'blocked') { feedback(false); setLast({ ok: false, text: t('g.blocked', { name, status: t(`g.status.${r.outcome.reason}`) }) }); }
     else { feedback(false); setLast({ ok: false, text: r.outcome.kind === 'unknown' ? t('g.unknownCode', { code }) : t('g.notOnList', { name }) }); }
   }
 
-  const groups: { key: string; title: string; lines: PackLine[] }[] = [];
+  // Tree per transport: a case with what's in it (indented), grouped by where the top case travels.
+  const visible = list.lines.filter((l) => mode === 'edit' || phase === 'out' || l.out > 0);
+  const tree = treeLines(visible, items);
+  const groups: { key: string; title: string; rows: { line: PackLine; depth: number }[] }[] = [];
   for (const tr of ['car', 'trailer'] as const) {
-    const lines = list.lines.filter((l) => (byId.get(l.itemId)?.transport ?? 'trailer') === tr && (phase === 'out' || mode === 'edit' || l.out > 0))
-      .sort((a, b) => (byId.get(a.itemId)?.homeLocationId ?? '').localeCompare(byId.get(b.itemId)?.homeLocationId ?? '') || (byId.get(a.itemId)?.name ?? '').localeCompare(byId.get(b.itemId)?.name ?? ''));
-    if (lines.length) groups.push({ key: tr, title: tr === 'car' ? t('g.inCar') : t('g.inTrailer'), lines });
+    const rows: { line: PackLine; depth: number }[] = [];
+    let rootTr: string | undefined;
+    for (const r of tree) {
+      if (r.depth === 0) rootTr = byId.get(r.line.itemId)?.transport ?? 'trailer';
+      if (rootTr === tr) rows.push(r);
+    }
+    if (rows.length) groups.push({ key: tr, title: tr === 'car' ? t('g.inCar') : t('g.inTrailer'), rows });
   }
-  const open = list.lines.filter((l) => (phase === 'out' ? l.out < l.qty : l.out > 0 && l.back < l.out));
+  const open = list.lines.filter((l) => (phase === 'out' ? !l.skip && l.out < l.qty : l.out > 0 && l.back < l.out));
 
   return (
     <div className={mode !== 'edit' ? 'pack-live' : ''}>
@@ -105,34 +114,42 @@ export default function PackPage() {
 
       {mode !== 'edit' && list.status !== 'done' && (
         <Section>
+          <div className="chips" style={{ marginBottom: 'var(--s2)' }} role="group" aria-label={t('g.scanMode')}>
+            <button className="chip" aria-pressed={group} onClick={() => updateSettings({ [scanKey]: 'group' } as Partial<typeof settings>)}>{t('g.scanMode.group')}</button>
+            <button className="chip" aria-pressed={!group} onClick={() => updateSettings({ [scanKey]: 'each' } as Partial<typeof settings>)}>{t('g.scanMode.each')}</button>
+          </div>
+          <p className="tiny muted" style={{ marginBottom: 'var(--s2)' }}>{group ? t('g.scanMode.groupHint') : t('g.scanMode.eachHint')}</p>
           <Scanner compact onCode={onScan} />
           {last && <div className={`scan-last ${last.ok ? 'ok' : 'bad'}`} role="status">{last.text}</div>}
         </Section>
       )}
 
       {groups.map((g) => (
-        <Section key={g.key} title={`${g.title} · ${g.lines.length}`}>
+        <Section key={g.key} title={`${g.title} · ${g.rows.filter((r) => !r.line.skip).length}`}>
           <div className="pack-lines">
-            {g.lines.map((l) => {
+            {g.rows.map(({ line: l, depth }) => {
               const it = byId.get(l.itemId);
               if (!it) return null;
               const target = phase === 'out' ? l.qty : l.out;
-              const done = (phase === 'out' ? l.out : l.back) >= target;
+              const done = !l.skip && (phase === 'out' ? l.out : l.back) >= target;
               const blocked = mode !== 'back' && ['out_of_service', 'in_repair', 'lent', 'missing', 'disposed'].includes(it.status);
+              const canSkip = mode === 'edit' || (mode === 'out' && l.out === 0);
               return (
-                <div key={l.id} className={`pack-line${done && mode !== 'edit' ? ' done' : ''}${blocked ? ' blocked' : ''}`}>
-                  {mode !== 'edit' ? (
+                <div key={l.id} className={`pack-line${done && mode !== 'edit' ? ' done' : ''}${blocked ? ' blocked' : ''}${l.skip ? ' skipped' : ''}`} style={{ paddingLeft: `calc(var(--s3) + ${depth * 22}px)` }}>
+                  {depth > 0 && <span className="tree-mark" aria-hidden="true">└</span>}
+                  {mode !== 'edit' && !l.skip ? (
                     <button className="pack-tick" aria-pressed={done} aria-label={it.name} onClick={() => setLine(l.id, phase === 'out' ? { out: done ? 0 : l.qty } : { back: done ? 0 : l.out, missing: undefined })}>{done ? '✓' : ''}</button>
-                  ) : <span className="pack-tick static">{l.qty > 1 ? `${l.qty}×` : ''}</span>}
+                  ) : <span className="pack-tick static">{l.skip ? '–' : l.qty > 1 ? `${l.qty}×` : ''}</span>}
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div className="pack-name">{it.name}</div>
-                    <div className="tiny muted"><span className="mono">{it.code}</span> · {l.reason || t(`g.src.${l.source}`)}{it.homeLocationId ? ` · ${locs.find((x) => x.id === it.homeLocationId)?.name ?? ''}` : ''}</div>
+                    <div className="tiny muted"><span className="mono">{it.code}</span> · {l.skip ? t('g.notTaken') : (l.reason || t(`g.src.${l.source}`))}{depth === 0 && it.homeLocationId ? ` · ${locs.find((x) => x.id === it.homeLocationId)?.name ?? ''}` : ''}</div>
                   </div>
                   {blocked && <StatusPill status={it.status} />}
-                  {it.kind === 'counted' && mode === 'edit' && (
+                  {it.kind === 'counted' && mode === 'edit' && !l.skip && (
                     <span className="row"><button className="btn icon small" onClick={() => setLine(l.id, { qty: Math.max(1, l.qty - 1) })}>−</button><span className="mono">{l.qty}</span><button className="btn icon small" onClick={() => setLine(l.id, { qty: l.qty + 1 })}>+</button></span>
                   )}
-                  {it.kind === 'counted' && mode !== 'edit' && <span className="mono small">{phase === 'out' ? l.out : l.back}/{target}</span>}
+                  {it.kind === 'counted' && mode !== 'edit' && !l.skip && <span className="mono small">{phase === 'out' ? l.out : l.back}/{target}</span>}
+                  {canSkip && <button className="btn small ghost" aria-pressed={!!l.skip} onClick={() => setLine(l.id, { skip: !l.skip })}>{l.skip ? t('g.take') : t('g.dontTake')}</button>}
                   {mode === 'edit' && <button className="btn icon small ghost" aria-label={t('common.delete')} onClick={() => save({ lines: list.lines.filter((x) => x.id !== l.id) })}>✕</button>}
                 </div>
               );
