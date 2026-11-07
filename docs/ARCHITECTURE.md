@@ -80,7 +80,7 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 ## App 5: Gear & Inventory (local mode)
 
 - Lives in `src/apps/gear/`; adds the Dexie version 5 tables `gearItems`, `gearPhotos` (Blobs, in the backup ZIP under `gear/`), `gearLocations`, `gearKits`, `packLists`, `gearMovements`, `gearIssues`, `maintenancePlans`, `maintenanceLogs`, `safetyTests`, `gearRentals` and `wishlist`. Products (App 2) get an optional `kitIds`.
-- `domain/gear.ts` is pure and tested: codes (`FQ-0042`), packing-list generation (set-up kit + kits of sold products + outdoor + always), scan application (containers tick off their contents, broken gear is blocked), reservation windows and conflicts (unique and counted items), trailer load, maintenance/safety due dates, insurance totals, and the CSV format of `docs/gear-inventory/gear-list.csv` (imported on demand, idempotent by code).
+- `domain/gear.ts` is pure and tested: codes, packing-list generation (set-up kit + kits of sold products + outdoor + always), scan application (containers tick off their contents, broken gear is blocked), reservation windows and conflicts (unique and counted items), trailer load, maintenance/safety due dates, insurance totals, and the CSV format of `docs/gear-inventory/gear-list.csv` (imported on demand, idempotent by code).
 - Scanning: `components.tsx → Scanner` reads QR and Code 128 with `getUserMedia` + `BarcodeDetector` where it supports both, else `zxing-wasm` (`zxing.ts`, iPhone Safari and the exe). The `.wasm` files are bundled via `?url` imports and precached by the PWA, so scanning works offline. A *Handscanner* mode keeps the code field focused for USB/Bluetooth scanners (keyboard input + Enter).
 - Gear tree: `GearItem.parentId` nests items in containers at any depth (`descendants`, `ancestry`, `wouldCycle`, `treeLines` in `domain/gear.ts`). Scan mode per phase (`Settings.gearLoadScan` / `gearUnloadScan`: `group` or `each`); `PackLine.skip` = on the list but not taken.
 - Labels: designs (`LabelPreset`, stored in `Settings.gearLabelPresets`, built-ins in `domain/labelArt.ts`) decide colours, module shape, logo, frame and text. `domain/labelArt.ts` draws QR codes from the zxing module grid and Code 128 from its bars as SVG, used by both the PDF (`domain/pdfDocs.ts → labelSheets`) and the live preview. `labelArt.test.ts` rasterises every design and reads it back with the zxing reader.
@@ -93,3 +93,24 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Contracts:** consumers get the softer cancellation scale, businesses the original one. The gig is booked when the agreement is signed (or, without an agreement, when the quote is accepted).
 - **Profit split:** 50/50 by default; adjustable per period (fixed % or by lineup per gig).
 - **Double bookings:** the same person can play two gigs on one day only if neither needs build-up (`setupRequired = false`) and there are at least 2 hours between them (configurable). Overlaps and blocked days are hard conflicts. Enquiries, options and sent quotes give soft warnings.
+
+### Gear codes (since v0.7.1)
+
+- **Tree codes:** a top-level item or case gets a number (`FQ-01-7`). Anything in a case gets the case number + its own number (`FQ-01.2-8`, deeper: `FQ-01.2.1-4`). There's no person letter: the gear belongs to Funqtion.
+- **Check character:** the last character is a weighted mod-11 check (`X` = 10). It catches every single mistyped character and every swap of two neighbours. A wrong check gives "code klopt niet" instead of opening the wrong item.
+- **Old codes** (`FQ-0042`, no check character) keep working. Their number is their tree number, so a child of `FQ-0009` becomes `FQ-9.1-x`.
+- **Codes never change by themselves.** When an item moves to another case, the app asks whether to make a new label. If yes, it gets a new code for its new case, and the old code is kept in `aliases` so old labels still scan.
+- **Two phones** can still hand out the same new code before they exchange backups. The backup merge then keeps both items, gives the imported one a temporary `-DUP-xxxx` code, and lists it so you can relabel it.
+
+### Backup merge and unique fields
+
+`importMerge` (`core/backup.ts`) resolves clashes on unique fields record by record instead of aborting the whole import:
+
+| Table | Resolution |
+|---|---|
+| `bankLines` (hash) | keep the matched copy |
+| `vatPeriods` (key) | keep the filed one |
+| `packLists` (gigId) | keep the newest |
+| `gearItems` (code) | keep both; the incoming item gets a temporary `-DUP-` code |
+
+Clashes are reported in the backup panel.

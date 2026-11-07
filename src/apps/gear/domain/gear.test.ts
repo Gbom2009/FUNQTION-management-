@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import type { GearItem, GearKit, MaintenanceLog, MaintenancePlan, PackLine } from '../../../core/types';
 import {
-  applyScan, defaultSetup, gearConflicts, generateLines, insuranceTotals, itemsFromCsv, itemsToCsv, loadByTransport, maintenanceDue, mergeLines, nextCode, normaliseCode,
+  applyScan, defaultSetup, gearConflicts, generateLines, insuranceTotals, itemsFromCsv, itemsToCsv, loadByTransport, maintenanceDue, mergeLines, nextCode, makeCode, checkChar, codeProblem, codeMatchesParent, normaliseCode,
   parseCsv, progress, safetyDue, trailerPayload,
 } from './gear';
 import { insuranceList, labelSheets } from './pdfDocs';
@@ -19,13 +19,66 @@ let n = 0;
 const uid = () => `l${n++}`;
 
 describe('codes', () => {
-  it('gives the next free code and understands typed or scanned codes', () => {
-    expect(nextCode([{ code: 'FQ-0001' }, { code: 'FQ-0103' }])).toBe('FQ-0104');
-    expect(nextCode([])).toBe('FQ-0001');
+  it('numbers top-level items after the highest number in use (old codes included)', () => {
+    expect(nextCode([{ code: 'FQ-0001' }, { code: 'FQ-0103' }])).toBe(makeCode('104'));
+    expect(nextCode([])).toBe('FQ-01-' + checkChar('01'));
+    expect(nextCode([{ code: makeCode('01') }, { code: makeCode('01.1') }])).toBe(makeCode('02'));
+  });
+  it('gives things in a case the case number + their own number, at any depth', () => {
+    const rack = { code: makeCode('04') };
+    const items = [rack, { code: makeCode('04.1') }, { code: makeCode('04.2') }, { code: makeCode('05.7') }];
+    expect(nextCode(items, rack)).toBe(makeCode('04.3'));
+    const drawer = { code: makeCode('04.2') };
+    expect(nextCode(items, drawer)).toBe(makeCode('04.2.1'));
+    // A case with an old flat code: its number is the tree number.
+    expect(nextCode([{ code: 'FQ-0009' }, { code: makeCode('9.1') }], { code: 'FQ-0009' })).toBe(makeCode('9.2'));
+  });
+  it('counts aliases, so a relabelled item never gets its old number reused', () => {
+    expect(nextCode([{ code: makeCode('01.3'), aliases: [makeCode('01.5')] }], { code: makeCode('01') })).toBe(makeCode('01.6'));
+  });
+  it('check character catches every single typo and every swap of neighbours', () => {
+    const base = '04.12';
+    const good = makeCode(base);
+    expect(normaliseCode(good)).toBe(good);
+    const chars = '0123456789.';
+    for (let i = 0; i < base.length; i++) {
+      for (const c of chars) {
+        if (c === base[i]) continue;
+        const typo = base.slice(0, i) + c + base.slice(i + 1);
+        if (!/^\d+(\.\d+)*$/.test(typo)) continue;
+        expect(checkChar(typo)).not.toBe(checkChar(base));
+      }
+      if (i < base.length - 1 && base[i] !== base[i + 1]) {
+        const swap = base.slice(0, i) + base[i + 1] + base[i] + base.slice(i + 2);
+        if (/^\d+(\.\d+)*$/.test(swap)) expect(checkChar(swap)).not.toBe(checkChar(base));
+      }
+    }
+    const wrong = `FQ-${base}-${checkChar(base) === '0' ? '1' : '0'}`;
+    expect(normaliseCode(wrong)).toBeNull();
+    expect(codeProblem(wrong)).toBe('check');
+    expect(codeProblem(good)).toBeNull();
+  });
+  it('understands typed, scanned and old codes', () => {
+    const c = makeCode('01.2');
+    expect(normaliseCode(c.toLowerCase())).toBe(c);
+    expect(normaliseCode(` ${c.replace('FQ-', 'fq ')} `)).toBe(c);
+    expect(normaliseCode(`https://funqtion.example/g/${c}`)).toBe(c);
     expect(normaliseCode('42')).toBe('FQ-0042');
     expect(normaliseCode('fq-0042')).toBe('FQ-0042');
     expect(normaliseCode('FQ0042')).toBe('FQ-0042');
+    expect(normaliseCode('FQ-0031-DUP-AB12')).toBe('FQ-0031-DUP-AB12');
     expect(normaliseCode('hallo')).toBeNull();
+  });
+  it('knows when a code no longer matches its case (offer a new label)', () => {
+    const caseA = { code: makeCode('01') };
+    const caseB = { code: makeCode('02') };
+    expect(codeMatchesParent({ code: makeCode('01.3') }, caseA)).toBe(true);
+    expect(codeMatchesParent({ code: makeCode('01.3') }, caseB)).toBe(false);
+    expect(codeMatchesParent({ code: makeCode('01.3') }, null)).toBe(false);
+    expect(codeMatchesParent({ code: makeCode('03') }, null)).toBe(true);
+    expect(codeMatchesParent({ code: makeCode('03') }, caseA)).toBe(false);
+    expect(codeMatchesParent({ code: 'FQ-0014' }, caseB)).toBe(true); // old flat codes make no claim
+    expect(codeMatchesParent({ code: makeCode('9.1') }, { code: 'FQ-0009' })).toBe(true);
   });
 });
 

@@ -16,6 +16,7 @@ Short report for the next Claude Code session on this repo. The original prompts
 | Contracts | Built in local mode (v0.4.0). Quote + contract **per event type** (together / after quote / none). **Softer consumer cancellation scale**. **Automatic countersigning**. Photo/video **opt-out**. Details at the top of `docs/contracts/PLAN.md`. |
 | Gear (app 5) | **One gig phone** per gig (no sync yet). Both phones are **iPhones** → QR only. Gear at **both homes**; transport by **personal car + trailer** (no van). Gig phone chosen **per gig**. Ownership **mixed** (Gijs / Coen / shared). Standard set: all-in-one controller, light bar with Gijs's **Laserworld DS-1000 Mk III (class 4)**, 2 tops, 1 sub, DJ booth, light & sound rack. **A4** weatherproof labels. Safety tests **off for now**. Rentals **rare**. **No business insurance** yet. Temporary gear list: `docs/gear-inventory/gear-list.csv` (replace when Gijs sends the real list; format in `GEAR-LIST.md`). |
 | Gear details | Trailer **750 kg** max (no own registration), no trailer lock, **hitch lock** when unattended, never left loaded overnight. DJ-only set-ups vary per venue (controller / USB / controller + light). Laser above heads; audience scanning only at private parties **with permission** (recorded per gig). **Gear tree** (cases in cases); load by case, unload item by item; labels QR large / QR small / barcode per item; handheld scanner support (v0.6.0). Label designs incl. Funqtion style (black/orange, logo in the QR) with live preview (v0.7.0). |
+| Privacy (repo is public) | `docs/gear-inventory/gear-list.csv` holds only the **structure** of the gear (codes, names, kits, cases). **Serial numbers, purchase dates, prices and replacement values never go into the repo**; they are entered in the app or imported from a private CSV on the device (`*private*.csv` is git-ignored). Enforced by `src/apps/gear/domain/privacy.test.ts`. |
 | Terms | Gijs asked for draft general terms: `docs/legal/ALGEMENE-VOORWAARDEN.md` and `src/apps/invoicing/terms.ts`. **Draft, not legally reviewed.** |
 
 ## 2. Still unanswered / to do
@@ -34,6 +35,8 @@ Short report for the next Claude Code session on this repo. The original prompts
 - **i18n:** `src/core/i18n/nl.ts` is the typed source. `en.ts` must have every key (`tsc` enforces this).
 - Money in **cents**. Dates are local `yyyy-mm-dd`, times `HH:mm` (an end time earlier than the start time means the next day).
 - **Invoice numbers:** gapless, **one series per member** (`F2026-G-0001`, `F2026-C-0001`) because there's no server. Finalised invoices are immutable; corrections are credit notes.
+- **Gear codes** are tree codes with a check character (`FQ-04.2-7`); old `FQ-0042` codes stay valid; relabel on move keeps the old code as an alias. Details in `docs/ARCHITECTURE.md`.
+- **Backup merge** resolves unique-field clashes per record (`core/backup.ts`, tested in `core/merge.test.ts`); never let one record abort an import.
 - **Contract versions and signatures are immutable** (guarded in `repo.ts`). Changes after signing are addenda.
 - `runTaskSync()` returns the in-flight run; tests that trigger it should `await runTaskSync()` in `afterEach` before the next test swaps the database.
 - **Reports are computed, never stored** (`src/apps/money/domain/ledger.ts`).

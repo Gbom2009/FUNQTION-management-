@@ -4,7 +4,7 @@ import { useI18n } from '../../../core/i18n';
 import { useToast } from '../../../core/ui';
 import type { GearItem } from '../../../core/types';
 import { findByCode, useGearItems, useGearLocations, moveItem } from '../data';
-import { ancestry, descendants } from '../domain/gear';
+import { ancestry, descendants, codeProblem } from '../domain/gear';
 import { Scanner, StatusPill, Thumb, feedback, useNightMode } from '../components';
 import { IssueDialog } from './Items';
 
@@ -27,7 +27,9 @@ export default function Scan() {
         feedback(!!it);
         setItem(it ?? null); setUnknown(it ? null : code);
       }} />
-      {unknown && <div className="banner warn" style={{ marginTop: 'var(--s3)' }}><span>?</span><div className="txt">{t('g.unknownCode', { code: unknown })} <Link to={`/gear/items/new?code=${encodeURIComponent(unknown)}`}>{t('g.newItem')}</Link></div></div>}
+      {unknown && (codeProblem(unknown) === 'check'
+        ? <div className="banner danger" style={{ marginTop: 'var(--s3)' }}><span>✕</span><div className="txt">{t('g.badCheck', { code: unknown })}</div></div>
+        : <div className="banner warn" style={{ marginTop: 'var(--s3)' }}><span>?</span><div className="txt">{t('g.unknownCode', { code: unknown })} <Link to={`/gear/items/new?code=${encodeURIComponent(unknown)}`}>{t('g.newItem')}</Link></div></div>)}
       {item && (
         <div className="card stack scan-card" style={{ marginTop: 'var(--s3)' }}>
           <div className="row"><Thumb itemId={item.id} size={56} /><div className="grow"><div className="strong big-text">{item.name}</div><div className="small muted">{item.code} · {[item.brand, item.model].filter(Boolean).join(' ')}</div></div><StatusPill status={item.status} /></div>
