@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { SessionProvider, useSession } from './core/session';
 import { ToastProvider } from './core/ui';
@@ -11,6 +12,9 @@ import SignHere from './apps/contracts/pages/SignHere';
 import GearApp from './apps/gear/GearApp';
 import Settings from './settings/Settings';
 
+// Maps (MapLibre, voice, routing) is big: it loads only when you open it.
+const MapsApp = lazy(() => import('./apps/maps/MapsApp'));
+
 function Gate() {
   const { locked } = useSession();
   if (locked) return <Login />;
@@ -23,6 +27,7 @@ function Gate() {
       <Route path="/contracts/:id/sign" element={<SignHere />} />
       <Route path="/contracts/*" element={<ContractsApp />} />
       <Route path="/gear/*" element={<GearApp />} />
+      <Route path="/maps/*" element={<Suspense fallback={<main className="main"><p className="muted">…</p></main>}><MapsApp /></Suspense>} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
