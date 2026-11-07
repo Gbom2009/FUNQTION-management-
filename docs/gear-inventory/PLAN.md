@@ -2,6 +2,16 @@
 
 > App 5 of the Funqtion suite. **FEEL THE MUSIQ.**
 > Status: functional plan, no code yet. Builds on App 1 (Bookings & CRM), App 2 (Quotes & Invoices), App 3 (Money & Accounting) and App 4 (Contracts), all live in this repo in local mode.
+> **Decisions made (answers from Gijs)**: these replace the matching recommendations below.
+> - **Sync:** start with **one gig phone** per gig (§0.2, option A in §7.3). The home server stays a later step.
+> - **Phones:** both **iPhone** (15 Pro and 16 Pro). So: **QR only** in the web app (Safari has no Web NFC), scanning always inside the installed app, and no reliable web torch control: labels must be high-contrast and placed consistently, with a small clip-on light in the van. NFC only if the native iPhone app (Tauri iOS) is built later (§5).
+> - **Gear list:** a temporary placeholder list is in [`gear-list.csv`](gear-list.csv) (format in [`GEAR-LIST.md`](GEAR-LIST.md)). Claude replaces it when the real list is compiled; the app imports it on first start.
+> - **Storage and transport:** gear lives at **both homes** (Gijs and Coen) and goes to gigs in **a van**. Locations: *Thuis Gijs*, *Thuis Coen*, *Bus*. Packing lists are sorted by home, and a "pick-up at Coen's" step is part of loading.
+> - **Labels:** **A4 weatherproof polyester sheets**, PDF from the app.
+> - **Safety tests (NEN 3140):** **not now**. The feature is built but off by default (Settings → Gear → Keuringen), so no warnings appear until it's switched on.
+> - **Rentals:** **rarely**. Simple rent-in/lend-out tracking with return reminders; no rent-out invoices or rental contract in the MVP.
+> - **Insurance:** **no business insurance yet** (neither equipment nor liability). See §6.1: the register and the insurance export still matter (proof for a future policy and for a police report), and the app shows an "onverzekerd" banner with the total value at risk.
+>
 > Safety and insurance points are a practical summary for a small Dutch DJ duo, **not advice from an inspector or insurer**. Items marked ⚖️ should be checked with your insurer or an inspection company. Prices are indicative (Nov 2026).
 
 ## Contents
@@ -402,7 +412,7 @@ Same AppShell as apps 1–4: bottom tabs on mobile, sidebar on desktop, NL/EN, d
 
 ### 5.3 Recommendation
 
-**QR now, NFC later, a human-readable code always.**
+**QR now, NFC later, a human-readable code always.** (Decided: both phones are iPhones, so QR only until a native iPhone app exists.)
 - Every item gets a short code (`FQ-0042`) **printed under the QR**, so a damaged label is still typed in a second.
 - Labels:
   - **cases and big gear:** weatherproof polyester labels (or aluminium tags for the expensive stuff), placed in the same spot on every case (top right of the lid), so scanning becomes muscle memory
@@ -434,6 +444,12 @@ Typical requirements for an equipment/music-gear policy (*apparatuurverzekering*
 | **Deductible** (*eigen risico*) per claim | | policy field |
 
 Also: keep the **yearly export outside the house** (cloud or with family). A fire takes the laptop with the register on it.
+
+**You have no business insurance yet.** That means two open risks:
+- **Your gear:** theft from the van or damage at a gig is fully your own loss. A private home contents policy usually **excludes gear used for paid gigs**, so don't count on it. The app shows the total value at risk on the Gear home screen and in the insurance overview, so you can weigh it against a premium.
+- **Liability:** if a speaker falls on a guest or your gear causes a fire, you are personally liable, and as a VOF or two private persons that's your own money. App 4's contract limits liability "to the price of the gig or what our insurance pays", but a limit doesn't help with personal injury, which can't be excluded towards consumers. Many venues and festivals also ask for proof of an AVB.
+
+My advice: get quotes for a **business liability policy (AVB)** first (usually the cheaper and more important one), then **equipment cover** once the register shows the real value. The insurance export is exactly what an insurer asks for when quoting. The app keeps the policy fields empty until then.
 
 **Liability is separate:** a business liability policy (*AVB*) covers damage *you* cause to others (a speaker falls on a guest). That's the one App 4's contract assumes (Q9 there). Gear insurance covers *your* gear.
 
@@ -539,16 +555,14 @@ The Gear app is a **work tool at 02:00 in a dark van**. Branding stays in the fr
 
 ## 9. Open questions
 
-1. **Phones:** which phones do you and Coen use (iPhone/Android)? This decides whether NFC is possible without a native app (§5.2).
-2. **Size:** roughly how many items do you own: unique pieces, cables, cases? A rough list (or photos of your storage) helps me seed categories and kits.
-3. **Sync:** do you want the home server (PocketBase + Tailscale) now, so both phones can scan the same gig, or start with "one gig phone" (§0.2, §7.3)?
-4. **Where gear lives:** one storage place or two homes? Do you own or rent a van, or use your own cars? These become locations, and the travel buffer for conflicts.
-5. **Ownership:** which gear is Gijs's, Coen's or shared? Should personal gear used at gigs earn a rental fee in the partner split (App 3), or is that out of scope?
-6. **Kits:** what are your standard set-ups (e.g. "DJ only", "Sound klein", "Sound groot", "Licht basis", "Laser")? And which App 2 products need which kit?
-7. **Labels:** a label printer (Brother P-touch / QL) or A4 sheets? Do you want aluminium tags for the expensive gear?
-8. **Insurance:** do you have equipment insurance now? Insurer, insured sum, deductible, and the theft-from-vehicle conditions?
-9. **Safety tests:** has your gear ever been inspected (NEN 3140)? Would you use an inspection company or test yourselves?
-10. **Lasers and effects:** which laser(s) do you have (class, power), and do venues ask you for laser/haze documents?
-11. **Renting:** how often do you rent in gear (from whom) and lend or rent out? Is renting out a business you want to grow (then the "Verhuur" contract template and invoices move into the MVP)?
-12. **Existing gear in the books:** has the gear been contributed to the business in App 3 yet (App 3 Q7)? The gear register can be the starting point for that contribution list.
-13. **Maintenance:** which recurring checks do you already do (cable tests, laser cleaning, firmware updates), and how often?
+Answered: phones (iPhone 15 Pro + 16 Pro), sync (one gig phone), where gear lives (both homes + a van), labels (A4 sheets), safety tests (not now), rentals (rarely), insurance (none yet). Still open:
+
+1. **The real gear list:** replace the placeholder in [`gear-list.csv`](gear-list.csv). Any form is fine; Claude converts it.
+2. **The van:** do you own or lease it, or rent one per gig? (Rented per gig → the van is a per-gig location, and its cost goes to App 3 as a gig expense.)
+3. **The gig phone:** is it always the phone of the gig's owner (App 1), or do you pick per gig?
+4. **Ownership:** which gear is Gijs's, Coen's or shared? Should personal gear used at gigs earn a rental fee in the partner split (App 3), or is that out of scope?
+5. **Kits:** what are your standard set-ups (e.g. "DJ only", "Sound klein", "Sound groot", "Licht basis", "Laser")? And which App 2 products need which kit?
+6. **Aluminium tags** for the most expensive gear (in addition to the A4 labels), or labels only?
+7. **Lasers and effects:** which laser(s) do you have (class, power), and do venues ask you for laser/haze documents?
+8. **Existing gear in the books:** has the gear been contributed to the business in App 3 yet (App 3 Q7)? The gear register can be the starting point for that contribution list.
+9. **Maintenance:** which recurring checks do you already do (cable tests, laser cleaning, firmware updates), and how often?
