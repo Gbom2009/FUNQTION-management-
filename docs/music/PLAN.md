@@ -2,7 +2,7 @@
 
 > Three connected music apps for Team Funqtion. **FEEL THE MUSIQ.**
 > Status: functional plan, **no code yet**. Builds on apps 1–6 and Maps, all in this repo (`docs/HANDOFF.md`).
-> Numbering: Library = 7, Sets = 8, Requests = 9. The client portal (in `src/hub/apps.ts` as "portal") moves to app 10, and Navigatie (Maps) keeps its tile.
+> Numbering: Library = 7, Sets = 8, Requests = 9. The client portal (in `src/hub/apps.ts` as "portal") is app 13 (see `docs/stage-and-clients/PLAN.md`), and Navigatie (Maps) keeps its tile.
 > Facts about DJ software, APIs and licensing were checked in November 2026. Items marked ⚠️ depend on third parties or on legal advice, so re-check them when building.
 
 ## Contents

@@ -17,11 +17,16 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 | 01 | **Bookings & CRM** – enquiries, clients, pipeline, calendar, reminders | ✅ v0.1 |
 | 02 | **Quotes & Invoices** – quotes with packages and optional extras, acceptance, deposit/final/cancellation invoices, credit notes, payments, reminders, branded PDFs | ✅ v0.1 ([plan](docs/quotes-invoices/PLAN.md)) |
 | 03 | **Money & Accounting** – receipts with on-device OCR, bank import (incl. Revolut), matching, trips, profit per gig, Gijs/Coen split, investments, hours, VAT/year reports, accountant pack | ✅ v0.3 ([plan](docs/money-accounting/PLAN.md)) |
-| 04 | Contracts | planned |
-| 05 | Gig-day planner | planned |
-| 06 | Gear | planned |
-| 07 | Client portal | planned |
-| 08 | Navigation (link to the existing app) | planned |
+| 04 | **Contracts** – contracts from the accepted quote, riders, signing | ✅ ([plan](docs/contracts/PLAN.md)) |
+| 05 | **Gear & Inventory** – register, QR labels, kits, packing lists, maintenance, laser checklist | ✅ v0.5 ([plan](docs/gear-inventory/PLAN.md)) |
+| 06 | **Gig Day** – timeline, tasks, Booth mode, wrap-up | ✅ v0.9 ([plan](docs/gig-day/PLAN.md)) |
+| 07–09 | **Library, Sets, Requests** | plan ([plan](docs/music/PLAN.md)) |
+| 10 | **Lights** – DMX scenes, moment buttons, beat sync, laser safety | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 11 | **Promo** – Instagram calendar, media library, post generators | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 12 | **Press Kit** – public EPK on the website, PDF, enquiries | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 13 | **Client Portal** – private page per gig: quote, contract, invoices, music wishes | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 14 | **Feedback** – post-gig feedback form, testimonials, review prompt | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| – | **Navigatie** (Maps, merged from FQ-maps) | ✅ v0.8 ([plan](docs/maps/PLAN.md)) |
 
 ## Getting the Windows exe
 
@@ -50,5 +55,7 @@ Local-first: everything is stored on the device (IndexedDB) and works offline. U
 - [Bookings & CRM — functional plan](docs/bookings-crm/PLAN.md)
 - [Quotes & Invoices — functional plan](docs/quotes-invoices/PLAN.md)
 - [Money & Accounting — functional plan](docs/money-accounting/PLAN.md)
+- [Music: Library, Sets & Requests (apps 7–9) — functional plan](docs/music/PLAN.md)
+- [Lights, Promo, Press Kit, Client Portal & Feedback (apps 10–14) — functional plan](docs/stage-and-clients/PLAN.md)
 - [Draft general terms (algemene voorwaarden)](docs/legal/ALGEMENE-VOORWAARDEN.md)
 - [Architecture: how the apps fit together](docs/ARCHITECTURE.md)
