@@ -11,6 +11,7 @@ import ContractsApp from './apps/contracts/ContractsApp';
 import SignHere from './apps/contracts/pages/SignHere';
 import GearApp from './apps/gear/GearApp';
 import GigDayApp from './apps/gigday/GigDayApp';
+import PromoApp from './apps/promo/PromoApp';
 import Settings from './settings/Settings';
 
 // Maps (MapLibre, voice, routing) is big: it loads only when you open it.
@@ -29,6 +30,7 @@ function Gate() {
       <Route path="/contracts/*" element={<ContractsApp />} />
       <Route path="/gear/*" element={<GearApp />} />
       <Route path="/gigday/*" element={<GigDayApp />} />
+      <Route path="/promo/*" element={<PromoApp />} />
       <Route path="/maps/*" element={<Suspense fallback={<main className="main"><p className="muted">…</p></main>}><MapsApp /></Suspense>} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />

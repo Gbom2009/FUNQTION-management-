@@ -19,4 +19,5 @@ export const APPS: AppEntry[] = [
   { id: 'gear', name: 'app.gear', desc: 'app.gear.desc', path: '/gear' },
   { id: 'portal', name: 'app.portal', desc: 'app.portal.desc' },
   { id: 'navigation', name: 'app.navigation', desc: 'app.navigation.desc', path: '/maps' },
+  { id: 'promo', name: 'app.promo', desc: 'app.promo.desc', path: '/promo' },
 ];

@@ -97,6 +97,15 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Sharing with the other phone:** "Plan delen" writes a small backup-format file of this gig day (gig, venue, steps, tasks, log, notes); "Plan importeren" merges it (newest change per record wins; logs are append-only).
 - **Route:** `/maps?gig=<id>` plans home → the loading entrance (or address) with the DJ gear trailer for a standard set-up; `&pick=1` starts placing the loading-door pin. Maps waits for its first database read before planning.
 
+## App 11: Promo (local mode, v0.10.0)
+
+- Lives in `src/apps/promo/` (route `/promo`). Plan: `docs/stage-and-clients/PLAN.md` (apps 10–14).
+- **Dexie version 8:** `consents` (shared by apps 11–14: purpose, gig/person, given, source, evidence; withdrawal sets `withdrawnAt`, rows are never deleted), `mediaAssets` (one library for Promo, Press Kit and portal; blob or external link, people in shot, usage, photographer, consent ids, sha256 for de-duplication; files travel in the backup ZIP under `media/`), `posts` (calendar; `plannedAt` is a reminder time), `videoJobs` (video briefs waiting for an MP4).
+- **Rule from Gijs: nothing publishes automatically.** A post is `published` only after a person presses "Gepost" (`confirmedBy`/`confirmedAt`). "Due" is derived (ready + reminder time passed). Sharing uses the phone's share sheet (media) + clipboard (caption).
+- **Pure, tested domain** `domain/promo.ts`: caption drafts NL/EN (private parties never name the client or venue), suggestions per confirmed gig (announcement and tonight only for public events or with an `event_promo` consent), reminder times (`Settings.promoTonightAt`, `promoThanksAt`), checks before posting (Instagram limits, photo opt-out from the signed contract, recognisable people without consent, internal media), engagement summary, the video brief.
+- **Video:** HyperFrames and Remotion are Claude Code plugins/skills. "Video-brief exporteren" downloads a ZIP (brief.json, brief.md, the media, the logo); the rendered MP4 is attached back to the post.
+- Brand kit in `Settings.brand` (defaults `DEFAULT_BRAND`).
+
 ## Navigatie: Funqtion Maps (merged from FQ-maps, v0.8.0)
 
 - Lives in `src/apps/maps/` (copied from github.com/Gbom2009/FQ-maps, phases 1–5; its original spec is `docs/maps/FQ-MAPS-SPEC.md`, the merge plan `docs/maps/PLAN.md`). Route `/maps`, **lazy-loaded** (`React.lazy` in `src/App.tsx`), so MapLibre, routing and the voice code only load when Maps opens. Static data in `public/maps/` (milieuzones, NL/BE outline, glyph fonts), data scripts in `scripts/maps/`. External endpoints stay in `src/apps/maps/config/services.ts`.

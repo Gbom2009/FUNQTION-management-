@@ -1,6 +1,6 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { db, DATA_TABLES } from './db';
-import type { Base, GearPhoto, Receipt, VenuePhoto } from './types';
+import type { Base, GearPhoto, MediaAsset, Receipt, VenuePhoto } from './types';
 
 // Backups. Until a (home) server exists, this is how Gijs and Coen share data
 // between devices and how the 7-year financial archive is kept.
@@ -17,7 +17,7 @@ export interface BackupFile {
   tables: Record<string, unknown[]>;
 }
 
-const BLOB_TABLES = new Set(['receipts', 'gearPhotos', 'venuePhotos']);
+const BLOB_TABLES = new Set(['receipts', 'gearPhotos', 'venuePhotos', 'mediaAssets']);
 
 export async function exportAll(): Promise<BackupFile> {
   const tables: Record<string, unknown[]> = {};
@@ -71,8 +71,9 @@ export async function importMerge(file: BackupFile, blobs: Map<string, Blob> = n
         let row = raw;
         if (BLOB_TABLES.has(t)) {
           const blob = blobs.get(row.id);
-          if (!blob) { res.skipped++; continue; }
-          row = { ...row, blob };
+          // Media can be a link only (YouTube, SoundCloud): no file to wait for.
+          if (!blob && !(t === 'mediaAssets' && (row as { externalUrl?: string }).externalUrl)) { res.skipped++; continue; }
+          if (blob) row = { ...row, blob };
         }
         const cur = (await table.get(row.id)) as Row | undefined;
         if (cur && (row.updatedAt ?? '') <= (cur.updatedAt ?? '')) { res.skipped++; continue; }
@@ -106,6 +107,7 @@ export async function importMerge(file: BackupFile, blobs: Map<string, Blob> = n
   return res;
 }
 
+const mediaExt = (mime: string) => (mime.split('/')[1] ?? 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'bin';
 const ext = (mime: string) => (mime.includes('pdf') ? 'pdf' : mime.includes('png') ? 'png' : 'jpg');
 
 /** ZIP with data.json + receipt files + gear photos. */
@@ -118,6 +120,8 @@ export async function exportZip(): Promise<Uint8Array> {
   for (const r of photos) files[`gear/${r.id}.${ext(r.mime)}`] = new Uint8Array(await r.blob.arrayBuffer());
   const venuePhotos = (await db.venuePhotos.toArray()).filter((r) => !r.deletedAt);
   for (const r of venuePhotos) files[`venues/${r.id}.${ext(r.mime)}`] = new Uint8Array(await r.blob.arrayBuffer());
+  const media = (await db.mediaAssets.toArray()).filter((r) => !r.deletedAt && r.blob);
+  for (const r of media) files[`media/${r.id}.${mediaExt(r.mime)}`] = new Uint8Array(await r.blob!.arrayBuffer());
   files['README.txt'] = strToU8(`Funqtion backup ${data.exportedAt}\nImport via Instellingen > Gegevens & back-up.\n`);
   return zipSync(files, { level: 6 });
 }
@@ -175,9 +179,9 @@ export async function readBackup(bytes: Uint8Array, passphrase?: string): Promis
     const files = unzipSync(data);
     const file = JSON.parse(strFromU8(files['data.json'])) as BackupFile;
     const blobs = new Map<string, Blob>();
-    const meta = new Map([...((file.tables.receipts ?? []) as Receipt[]), ...((file.tables.gearPhotos ?? []) as GearPhoto[]), ...((file.tables.venuePhotos ?? []) as VenuePhoto[])].map((r) => [r.id, r.mime]));
+    const meta = new Map([...((file.tables.receipts ?? []) as Receipt[]), ...((file.tables.gearPhotos ?? []) as GearPhoto[]), ...((file.tables.venuePhotos ?? []) as VenuePhoto[]), ...((file.tables.mediaAssets ?? []) as MediaAsset[])].map((r) => [r.id, r.mime]));
     for (const [path, content] of Object.entries(files)) {
-      const m = path.match(/^(?:receipts|gear|venues)\/([^.]+)\./);
+      const m = path.match(/^(?:receipts|gear|venues|media)\/([^.]+)\./);
       if (m) blobs.set(m[1], new Blob([content as BlobPart], { type: meta.get(m[1]) ?? 'image/jpeg' }));
     }
     return { file, blobs };
