@@ -424,6 +424,15 @@ export interface Review extends Base {
   rating?: number;
   text?: string;
   mayPublish?: boolean;
+  // App 14 – Feedback (all optional, older rows stay valid)
+  mayUseName?: boolean;
+  displayName?: string;     // as the client wants to be shown ("Lisa & Tom")
+  scores?: { music?: number; vibe?: number; communication?: number; value?: number; recommend?: number };
+  highlights?: string[];
+  source?: 'feedback_form' | 'google' | 'instagram' | 'manual';
+  language?: Lang;
+  approvedAt?: string;      // we approved it for publication
+  publishedOn?: ('epk' | 'website' | 'instagram')[];
 }
 
 export interface Settings {
@@ -1324,3 +1333,38 @@ export const DEFAULT_BRAND: BrandKit = {
   captionFooterEn: 'Bookings: Booking@funqtion.nl',
   instagram: 'funqtionofficial',
 };
+
+// ---- App 12 – Press Kit ------------------------------------------------------
+
+export interface EpkLangText {
+  bioShort: string;           // ≤ 300 characters, also the meta description
+  bioLong: string;
+  quote?: string;
+  riderSummary: string;       // public part of the rider only
+  seoTitle: string;
+}
+export const EPK_SECTIONS = ['bio', 'members', 'photos', 'mixes', 'videos', 'testimonials', 'gigs', 'rider', 'downloads', 'booking'] as const;
+export type EpkSection = (typeof EPK_SECTIONS)[number];
+/** The press kit: one record (id 'epk'), published as static pages into funqtion-site. */
+export interface Epk extends Base {
+  nl: EpkLangText;
+  en: EpkLangText;
+  sections: EpkSection[];      // visible, in this order
+  photoIds: ID[];              // mediaAssets with usage press_ok
+  logoIds: ID[];
+  mixIds: ID[];                // media links (SoundCloud/Mixcloud) or audio
+  videoIds: ID[];
+  reviewIds: ID[];             // reviews with permission
+  hiddenGigIds: ID[];          // played public gigs to leave out
+  siteBase: string;            // canonical base URL of the website
+  bookingEmail: string;
+  instagram: string;
+  publishedAt?: string;
+  version: number;
+}
+export interface EpkPublish extends Base {
+  at: string;
+  version: number;
+  files: string[];
+  snapshot: string;            // JSON of the Epk at publish time
+}

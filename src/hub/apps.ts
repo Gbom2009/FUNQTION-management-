@@ -20,4 +20,5 @@ export const APPS: AppEntry[] = [
   { id: 'portal', name: 'app.portal', desc: 'app.portal.desc' },
   { id: 'navigation', name: 'app.navigation', desc: 'app.navigation.desc', path: '/maps' },
   { id: 'promo', name: 'app.promo', desc: 'app.promo.desc', path: '/promo' },
+  { id: 'presskit', name: 'app.presskit', desc: 'app.presskit.desc', path: '/presskit' },
 ];

@@ -106,6 +106,13 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Video:** HyperFrames and Remotion are Claude Code plugins/skills. "Video-brief exporteren" downloads a ZIP (brief.json, brief.md, the media, the logo); the rendered MP4 is attached back to the post.
 - Brand kit in `Settings.brand` (defaults `DEFAULT_BRAND`).
 
+## App 12: Press Kit (local mode, v0.11.0)
+
+- Lives in `src/apps/presskit/` (route `/presskit`). **Dexie version 9:** `epk` (one record, id `epk`: NL/EN texts, visible sections in order, picked photos/logos/mix and video links/reviews, hidden gigs, site address) and `epkPublishes` (history with a JSON snapshot; "Terugzetten" restores texts and picks).
+- **Pure generator** `domain/epk.ts`: static HTML in funqtion-site's own markup and CSS classes (`presskit/index.html`, `en/presskit/index.html`, relative paths to `css/`, `img/`, `js/`), canonical + hreflang + Open Graph + JSON-LD `MusicGroup`, past gigs from played public gigs (private parties only as a count), testimonials only when `mayPublish` + `approvedAt` (name only with `mayUseName`), mixes/videos as links (no embeds), sitemap.xml + robots.txt, HTML budget check (150 KB). Default texts are the site's own copy from `over.html`; the English is a translation to review.
+- **Publishing:** "ZIP voor de website maken" downloads a ZIP to unpack in the root of funqtion-site (adds only presskit/, en/presskit/, sitemap.xml, robots.txt) and push. PDFs (NL/EN, A4) come from `domain/pdf.ts` via the shared pdfmake setup.
+- **PDF fix for the whole suite:** JetBrains Mono's ligatures ("...", "--", "//", "==") made pdfmake hang. `invoicing/domain/pdfText.ts` puts an invisible U+FEFF between punctuation pairs in every definition before rendering (quotes, invoices, contracts, labels, press kit).
+
 ## Navigatie: Funqtion Maps (merged from FQ-maps, v0.8.0)
 
 - Lives in `src/apps/maps/` (copied from github.com/Gbom2009/FQ-maps, phases 1–5; its original spec is `docs/maps/FQ-MAPS-SPEC.md`, the merge plan `docs/maps/PLAN.md`). Route `/maps`, **lazy-loaded** (`React.lazy` in `src/App.tsx`), so MapLibre, routing and the voice code only load when Maps opens. Static data in `public/maps/` (milieuzones, NL/BE outline, glyph fonts), data scripts in `scripts/maps/`. External endpoints stay in `src/apps/maps/config/services.ts`.
