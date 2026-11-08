@@ -10,7 +10,9 @@
 > - **Lighting hardware:** a **Daslight DVC Gold** interface (with Daslight 4/5 software) and a **SoundSwitch Micro DMX** dongle. Both only work with their own software ⚠️, so Lights **controls Daslight and SoundSwitch** (MIDI) instead of sending DMX itself (§0.2, §3).
 > - **Instagram:** probably a **Business** account, and **no post goes out without a manual confirmation**. Promo never publishes on its own (§0.4, §4.4).
 > - **Domain:** the website **stays** on `gbom2009.github.io/funqtion-site/`, and the DNS does **not** move to Cloudflare (§5.2).
-> - **Home server:** **none**, so Cloudflare Tunnel and Tailscale Funnel are out. The public parts (enquiry form, portal, feedback) need a different backbone: §0.1 (decision needed, Q17).
+> - **Home server:** **none**, so Cloudflare Tunnel and Tailscale Funnel are out. **Decision (Q17): everything stays local until Gijs says "self-hosted".** So the public parts run in **local mode** first (nothing hosted, §0.1), with all features designed so a hosted mode plugs in later.
+> - **Lights split (Q2b):** **SoundSwitch runs all lights**, **Daslight only the laser**. **DJ software (Q2c):** Serato with local files when the client values light sync (SoundSwitch needs local files), otherwise djay with streaming. SoundSwitch subscription stays (Q16). Fixtures and their DMX addresses: Gijs adds them later.
+> - **Laser (Q3):** **no remote interlock/e-stop** connected. The app treats that as a hard warning (§3.5).
 > - **Google Business Profile:** **none**, so the Google review prompt is off until one exists (§5.3, app 14).
 
 ## Contents
@@ -44,7 +46,17 @@
 | Costs/limits | €0 on the free plan: 100,000 requests per day, enough for us many times over ⚠️. D1 free limits are enforced since September 2026 (queries fail when the daily limit is hit, far above our use). | €0. |
 | Privacy | Cloudflare is a processor (data processing terms), choose EU storage where offered ⚠️. | The encrypted file sits on a public host; if a link leaks, that gig's page can be read. Weak for invoices. |
 
-- **Recommendation: A**, holding **only what a client or guest must see** (a published snapshot per gig), never the full database. The master stays local-first on our devices (Dexie), like today. Devices pull new answers from the relay when online.
+- **Decision (Q17): local until you say "self-hosted".** So we start with a **local mode** that needs no hosting at all, and keep option A (or your own server) as the **hosted mode** that switches on when you say so:
+
+| | **Local mode (now)** | **Hosted mode (later, on your word)** |
+|---|---|---|
+| Portal | A link to a static page in the hub's own GitHub Pages site (`…/#/c/<data>`): the gig's info is **inside the link** (compressed, after the `#`, which browsers never send to a server), so nothing is stored anywhere but in your WhatsApp/e-mail. Shows overview, timeline, contacts, music wishes form, played list. Quote, contract and invoices stay **PDF attachments** as today. | Full portal (§6): token + e-mail code, live status, accept/sign online. |
+| Client answers (wishes, accept, feedback) | The page builds a **pre-filled WhatsApp or e-mail message** to us with the answers plus a short code block. In the hub: "Plak antwoord" reads it into the right tables. | Saved directly; devices pull them. |
+| Enquiry form (Press Kit) | Pre-filled `mailto:Booking@funqtion.nl` (and a WhatsApp button). | Form posts to the relay → app 1 enquiry. |
+| Requests (app 9) | Not possible live without a server; a QR to our WhatsApp as a stop-gap. | Live requests. |
+
+- In hosted mode the relay holds **only what a client or guest must see** (a published snapshot per gig), never the full database. Either way the master stays local-first on our devices (Dexie), like today.
+- ⚠️ Long links: a link with the data inside can get long (a few KB). WhatsApp and mail handle that, but keep the page data small (no photos in the link; photos go as normal WhatsApp/album shares).
 - If the relay is unreachable: the Press Kit still works (static), enquiries fall back to `mailto:Booking@funqtion.nl`, and clients always have the PDFs we already sent.
 - This also affects **Requests (app 9)**, which planned the home server: the same Worker can serve it (live updates via Durable Objects or polling ⚠️ check free-plan support when building).
 
@@ -241,7 +253,12 @@ Press Kit → enquiry (1) → quote in portal (2, 13) → contract signed in por
 | **Daslight DVC Gold** | USB-C interface for Daslight 4/5: 1024 channels (2 universes), RJ45 + XLR, SD card for stand-alone shows, buttons, dry-contact inputs that trigger scenes. | Full scene/step editor, stand-alone mode (a backup if the laptop dies: scenes play from the box), MIDI-triggerable. | Only works with Daslight software. OSC support not confirmed; we use MIDI and keyboard shortcuts. |
 | **SoundSwitch Micro DMX** | USB dongle, 1 universe, SoundSwitch software. | Reads the track in **Serato** (and Engine DJ / Virtual DJ): beat-synced autoloops, pre-scripted shows per track, Ableton Link, MIDI mapping. | Only works with SoundSwitch software (subscription after the trial ⚠️). **djay is not on the supported list** ⚠️ so with djay use Ableton Link only. |
 
-**Suggested split** (check with your fixtures, Q2b): SoundSwitch drives the **light bar** (beat-synced with Serato during the party), Daslight drives the **laser and moments** (blackout, first dance, countdown, the laser zones and its STOP), with the DVC Gold's stand-alone mode as a backup. If you'd rather use one program for everything, Daslight alone (2 universes) can do it, without the Serato track sync.
+**Your split (Q2b):** **SoundSwitch drives all lights** (light bar and other fixtures, beat-synced, moments as SoundSwitch overrides/autoloops), **Daslight drives only the laser** (its scenes, blackout and STOP), with the DVC Gold's stand-alone mode as a laser backup. So Lights sends moment buttons to SoundSwitch and laser commands to Daslight; a moment like FIRST DANCE sends both (soft light in SoundSwitch, laser off in Daslight).
+
+**Serato or djay per gig (Q2c):** SoundSwitch's track sync needs **local files in Serato**. So each gig gets a choice **"Licht op de muziek"**:
+- **Yes** → Serato with local files; Library (app 7) and Sets (app 8) warn when a planned track is only on streaming, and the packing list (app 5) adds the SoundSwitch dongle.
+- **No** → djay with streaming allowed; SoundSwitch runs beat-matched autoloops via Ableton Link (tempo only, no per-track script).
+- Idea: offer "lichtshow op de muziek" as an option in the quote (app 2 product), so the client's choice sets this flag automatically.
 
 **If you ever want our own engine (later):**
 
@@ -308,7 +325,8 @@ The screen always shows **which beat source is active** and its BPM; if it drops
 - **Aviation:** outdoor lasers can blind pilots. Never aim upward outdoors and check with the municipality for outdoor events (e.g. near Eindhoven Airport / Volkel, both close to Aarle-Rixtel) ⚠️.
 
 **What the app does:**
-1. **Laser checklist** (app 5 §6.3) must be done before the laser channel unlocks for a show: key switch OK, e-stop/interlock within reach, mounting secure, beam height ≥ 3 m above the floor (setting; many guidelines use ~3 m) in the audience area, no reflective surfaces, venue allows lasers, outdoor/aviation check.
+0. **No remote e-stop yet (Q3).** Your laser has no remote interlock or e-stop connected. Until it does, Lights shows a permanent red banner on the laser screens, **audience scanning is completely blocked** (even with permission), and the checklist requires an operator **within arm's reach of the laser's key switch or power** for as long as it is on. **Strong advice:** connect a remote interlock / emergency stop (many show lasers, the Laserworld DS series included, have an interlock connector for one ⚠️ check the DS-1000 Mk III manual) and place the button next to the DJ booth. It costs little and many venues ask for it (see the Spot Groningen conditions above).
+1. **Laser checklist** (app 5 §6.3) must be done before the laser channel unlocks for a show: key switch OK, e-stop/interlock within reach (now: "nee" → operator next to the key switch), mounting secure, beam height ≥ 3 m above the floor (setting; many guidelines use ~3 m) in the audience area, no reflective surfaces, venue allows lasers, outdoor/aviation check.
 2. **Zones**: per venue a drawing in laser X/Y space: `no_go` (DJ booth, doors, balconies, cameras), `projection_ok` (walls, ceiling, over heads), `audience` (only usable with permission + a measured scan-safe setting). With Daslight as the engine, the zones are a **checklist and drawing** ("which Daslight laser scenes are safe in this venue"), and Lights only shows/triggers the scenes you marked safe for that venue. Real clamping of DMX values is only possible with our own engine later ⚠️.
 3. **Audience scanning**: off by default. Can only be switched on per show at a private party, with a recorded **permission** (`consents`, purpose `audience_scan`, who and when) **and** a confirmation "this set-up has been measured below MPE" — otherwise the app refuses. It repeats the gear-plan warning: permission does not make class 4 scanning eye-safe.
 4. **STOP**: a red button on every Lights screen and the keyboard Escape key: sends the mapped "laser off / blackout" MIDI message to Daslight (or SoundSwitch), logged. It only works if that mapping is set and tested (`controllerMaps` "test all" before each show). The screen says plainly: **the hardware e-stop/key switch is the real stop**.
@@ -479,18 +497,19 @@ Legend: **D** = desktop/laptop (hub, Tauri), **T** = tablet behind the decks (la
 | **10 Lights** | Tauri app sends MIDI to **Daslight** and **SoundSwitch** (`controllerMaps` + "test all"); fixture profiles (manual + QLC+ import) and rig/patch with the DMX calculator; named scenes/autoloops with tags; presets per event type; moment buttons; blackout + laser STOP (mapped, tested); laser checklist and log; tablet remote over LAN; BPM from Ableton Link or tap. | Venue profiles from Gig Day; auto-follow of the set plan sections; Pro DJ Link; own DMX engine with zone clamping (needs an open interface); Art-Net. |
 | **11 Promo** | Media library (+ consent fields); brand kit; content calendar; drafts from gigs (3 templates); reminder + manual posting flow with confirmation; stats entered by hand or read via the API once connected. | "Plaats nu" via the API (still a manual tap); daily insights; Remotion render queue; Hyperframes integration (once the code is in the repo); best-time suggestions; comment replies; reels aftermovie from gig clips. |
 | **12 Press Kit** | Editor + preview; static generator into funqtion-site (`/presskit/`, `/en/presskit/`); logo/photo downloads; testimonials (manual at first); PDF; SEO basics (meta, JSON-LD, sitemap, hreflang, OG); booking button as a pre-filled mailto. | Enquiry form to the relay; merge *over*/*feesten* into generated data; own domain; Google Business Profile link; auto past-gigs. |
-| **13 Client Portal** | Needs the relay (§0.1). Token links + e-mail code; overview, quote (view/accept), invoices + status, music wishes → app 8, timeline/contacts → app 6; portal manager. | Contract signing relay; photos + played list after the gig; payment links; multi-person access; push/e-mail notifications to us on changes. |
-| **14 Feedback** | Feedback form (on the relay; until then a simple WhatsApp/e-mail reply flow), results into `reviews`; request in the wrap-up; testimonials approval. | Google review button (once a profile exists); reminder; insights with play history; low-score follow-up; multi-respondent (committee). |
+| **13 Client Portal** | **Local mode** (§0.1): data-in-link page with overview, timeline, contacts, music wishes (answers back via WhatsApp/e-mail + "Plak antwoord") → apps 6 and 8; quote/contract/invoices as PDFs; portal manager. | Hosted mode: token links + e-mail code, quote accept, invoices + live status, contract signing relay; photos + played list after the gig; payment links; multi-person access; push/e-mail notifications to us on changes. |
+| **14 Feedback** | Feedback form as a local-mode page (answers come back as a WhatsApp/e-mail message, "Plak antwoord"), results into `reviews`; request in the wrap-up; testimonials approval. | Google review button (once a profile exists); reminder; insights with play history; low-score follow-up; multi-respondent (committee). |
 
 ### 8.2 Recommended build order
 
 1. **12 Press Kit (static part)** — no server, quick win, helps bookings now, uses existing site and reviews.
 2. **11 Promo (media library + calendar, manual posting)** — the media library is needed by 12, 13 and 14; no API yet.
-3. **Relay step** (free Cloudflare Worker + D1 on `workers.dev`, `shareLinks`, `consents`; §0.1 option A) — the backbone that Requests (9), Portal, Feedback and the enquiry form all need. Do it once, together with app 9 if that's being built.
-4. **14 Feedback** — smallest public app, tests the server with low risk (no money data), and produces testimonials for 12.
-5. **13 Client Portal** — builds on the same server and token system, then the contract signing relay.
-6. **10 Lights** — now smaller (MIDI bridge to Daslight/SoundSwitch instead of an own engine); independent of the relay; best built after app 8 (sections) exists. Start with a test night on the standard set.
-7. **Then the "later" columns**: "Plaats nu" via the API, own DMX engine, Remotion automation.
+3. **Local-mode links** (`consents`, the data-in-link page, "Plak antwoord" in the hub; §0.1) — the shared base for Feedback and the Portal without any hosting.
+4. **14 Feedback** — smallest client-facing app, no money data, and produces testimonials for 12.
+5. **13 Client Portal** — local mode first (info, timeline, wishes; PDFs by attachment).
+6. **Hosted mode** (relay or self-hosted, `shareLinks`) — only when you say "self-hosted"; then the enquiry form, live portal, signing relay and Requests (app 9) switch on.
+7. **10 Lights** — now smaller (MIDI bridge to Daslight/SoundSwitch instead of an own engine); independent of the relay; best built after app 8 (sections) exists. Start with a test night on the standard set.
+8. **Then the "later" columns**: "Plaats nu" via the API, own DMX engine, Remotion automation.
 
 If the light show is the most urgent for an upcoming season (e.g. carnaval), Lights can move to step 1: it does not depend on the others.
 
@@ -503,7 +522,7 @@ If the light show is the most urgent for an upcoming season (e.g. carnaval), Lig
 | **Our tools** (10 surfaces, 11, 12 editor, 13 manager, 14 inbox) | Same suite: React + TypeScript + Vite PWA, Dexie, typed i18n, AppShell, Tauri exe. New tables in Dexie version 8+. | One database, one backup, one app. |
 | **Light control** | Rust inside the Tauri app: MIDI out (`midir`, to a virtual port: IAC on Mac, loopMIDI on Windows) to Daslight and SoundSwitch, WebSocket server on the LAN for the tablet, Ableton Link via a Rust binding ⚠️ licence. Own DMX output only later. | Your interfaces only run with their own software (§0.2). |
 | **Tablet remote** | The same PWA, Lights "Live" screen, connects to `ws://<laptop>.local:<port>` with a pairing code. | Works on iPad Safari; no install needed. |
-| **Relay (public parts)** | **Cloudflare Worker + D1** on a free `*.workers.dev` address (§0.1 option A). No machine at home, no domain move. Free plan: 100,000 requests/day ⚠️. | There is no home server; this replaces it for apps 9, 12 (form), 13, 14. |
+| **Public parts** | **Now: local mode**: static pages in the hub's GitHub Pages build, data inside the link, answers by message (§0.1). **Later (on your word):** a free Cloudflare Worker + D1 on `*.workers.dev`, or your own self-hosted server. | Gijs: local until he says self-hosted. |
 | **Public pages** | Portal and feedback: a tiny separate Vite build (no full suite JS, < 100 KB), served by the Worker. Press Kit: static HTML in funqtion-site on GitHub Pages. | Fast on a guest's phone; nothing of our admin code is public. |
 | **Instagram** | Stats read by the desktop app (token on the device, never in the repo). "Plaats nu" later via the relay for the temporary public media URL. No scheduler: every post is confirmed by hand. | Gijs's rule: nothing goes out without a manual confirmation. |
 | **Video** | Remotion on the Mac (Node + Chrome) by hand ⚠️ licence for automation. Hyperframes and the Remotion compositions: from the chats into the repo first (Q1). | Rendering can't run in the browser at good quality. |
@@ -569,24 +588,20 @@ Rule for everything outside: the **logo files from funqtion-site** are the sourc
 
 ## 12. Open questions
 
-Answered (November 2026): tools live in chats (Q1), interfaces Daslight DVC Gold + SoundSwitch Micro (Q2), Instagram probably Business with manual confirmation for every post (Q4), website stays on github.io (Q6), no home server (Q7), no Google Business Profile (Q9). Still open:
+Answered (November 2026): tools live in chats (Q1), interfaces Daslight DVC Gold + SoundSwitch Micro (Q2), Instagram probably Business with manual confirmation for every post (Q4), website stays on github.io (Q6), no home server (Q7), no Google Business Profile (Q9), **local until "self-hosted"** (Q17), **SoundSwitch = all lights, Daslight = laser only** (Q2b), **Serato + local files when light sync matters, else djay** (Q2c), **SoundSwitch subscription stays** (Q16), **no remote e-stop on the laser** (Q3). Still open:
 
-1. **DMX calculator, Hyperframes prompt generator, Remotion videos:** please paste the code from the chats into the repo (e.g. `tools/dmx-calculator/`, `tools/hyperframes/`, `tools/remotion/`), or send it in a message so it can be added. Until then those parts are built from the description.
-2. **Fixtures:** which **light bar** (brand/model, DMX mode) and other fixtures? And:
-   - **2b.** How do you use the two interfaces today: which fixtures on Daslight and which on SoundSwitch? Or one program for everything?
-   - **2c.** Do you play mostly **Serato** (SoundSwitch track sync works) or **djay** (not supported by SoundSwitch ⚠️, so Ableton Link only)?
-3. **Laser:** which DMX mode/channels on the DS-1000 Mk III, is there a **remote interlock/e-stop** connected, and who operates it at gigs? Any venue that ever asked for laser documents?
-4. **Instagram:** check in the app (Settings → Account type) whether it's **Business**; story publishing through the API needs Business. Who confirms posts: both of you?
-5. **Laptop for the light control:** the Mac that runs the DJ software (as in the music plan), with Daslight and SoundSwitch on the same Mac?
-6. **Relay (Q17 below)** is the main new decision.
-7. **Mixes and videos:** where do they live (SoundCloud, Mixcloud, YouTube, own files)? Are the mixes cleared for public streaming?
-8. **Photos:** who takes photos at gigs (you, a friend, the client's photographer)? Do we need a photographer credit and consent from them?
-9. **Rider summary:** what may be public (space, power, table, parking), and what stays only in the contract?
-10. **Press Kit replaces what:** may the generated Press Kit take over the bio on *over* and the list on *feesten*, or should those stay hand-written?
-11. **Client portal lock date:** wishes locked 7 days before the gig — OK? And should the client see the full played list or a top 20?
-12. **Feedback timing:** together with the thank-you the next morning (as decided in app 6), and one reminder after 5 days — OK?
-13. **Priority:** build order as in §8.2 (Press Kit first, Lights later), or is a light show needed sooner (season, specific gig)?
-14. **Ableton Link licence:** fine to use under GPL for our own use only? (Only matters if the exe is ever shared outside the two of you.)
-15. **Google Business Profile:** set one up later (free, helps local search), or leave it?
-16. **SoundSwitch subscription:** do you keep paying for it, or should the plan assume Daslight only?
-17. **Relay for the public parts (§0.1):** OK to use a **free Cloudflare Worker on `workers.dev`** (no domain move, no machine at home; Cloudflare stores the published snapshots and answers), or do you prefer **no server at all** (read-only portal, answers by WhatsApp/e-mail)? This also decides how Requests (app 9) works.
+1. **DMX calculator, Hyperframes prompt generator, Remotion videos:** paste the code from the chats into the repo (e.g. `tools/dmx-calculator/`, `tools/hyperframes/`, `tools/remotion/`), or send it in a message.
+2. **Fixtures and DMX addresses:** you'll add them later (in the Gear app, so Lights can use them).
+3. **Laser e-stop:** will you connect a remote interlock / e-stop button (§3.5)? Until then the app blocks audience scanning and asks for an operator next to the key switch. Who operates the laser at gigs?
+4. **Instagram:** check in the app (Settings → Account type) whether it's **Business**. Who confirms posts: both of you?
+5. **Laptop:** the Mac runs Serato/djay, SoundSwitch and Daslight together?
+6. **Mixes and videos:** where do they live (SoundCloud, Mixcloud, YouTube, own files)? Cleared for public streaming?
+7. **Photos:** who takes photos at gigs? Photographer credit and consent?
+8. **Rider summary:** what may be public (space, power, table, parking)?
+9. **Press Kit replaces what:** may it take over the bio on *over* and the list on *feesten*?
+10. **Portal lock date:** wishes locked 7 days before the gig — OK? Full played list or a top 20?
+11. **Feedback timing:** with the thank-you the next morning, one reminder after 5 days — OK?
+12. **Priority:** build order as in §8.2, or Lights sooner?
+13. **Ableton Link licence:** fine under GPL for our own use only?
+14. **Google Business Profile:** set one up later, or leave it?
+15. **"Lichtshow op de muziek" as a quote option** (§3.1): want it as a product in app 2?
