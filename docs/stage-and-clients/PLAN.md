@@ -6,7 +6,8 @@
 > Facts about hardware, APIs, licences and rules were checked in November 2026. Items marked ⚠️ depend on third parties or on legal advice, so re-check them when building.
 
 > **Gijs's answers (November 2026), already worked into this plan:**
-> - **DMX calculator, Hyperframes prompt generator, Remotion videos:** they live in Claude chats, not in a repo. To use them, paste the code (or export it) into this repo, e.g. `tools/dmx-calculator/`, `tools/hyperframes/`, `tools/remotion/`. Until then the plan describes what they become, not how they work today.
+> - **DMX calculator:** now in the repo as `tools/dmx-calculator/index.html` (Gijs's original, unchanged). How it becomes the Patch screen: §3.2.
+> - **HyperFrames and Remotion:** these are **Claude Code plugins/skills**, not code of our own: HyperFrames (HeyGen, open source) writes HTML video compositions and renders them to MP4 on your machine; Remotion's agent skills do the same with React compositions. Promo works **with** them instead of rebuilding them (§4.4).
 > - **Lighting hardware:** a **Daslight DVC Gold** interface (with Daslight 4/5 software) and a **SoundSwitch Micro DMX** dongle. Both only work with their own software ⚠️, so Lights **controls Daslight and SoundSwitch** (MIDI) instead of sending DMX itself (§0.2, §3).
 > - **Instagram:** probably a **Business** account, and **no post goes out without a manual confirmation**. Promo never publishes on its own (§0.4, §4.4).
 > - **Domain:** the website **stays** on `gbom2009.github.io/funqtion-site/`, and the DNS does **not** move to Cloudflare (§5.2).
@@ -292,7 +293,11 @@ The light bar we use (model ⚠️ unknown, Q2) probably has its own sound-activ
 - Scenes are programmed in Daslight/SoundSwitch; in our app you give each one a name, tags and a big button.
 - A or B only come back if you buy an open interface. QLC+ fixture import is still useful for the patch (channel layouts).
 
-The **DMX calculator** you made in a chat (Q1: paste it into the repo) becomes the "Patch" screen: next free address, overlaps, DIP-switch view, and a printable patch sheet.
+The **DMX calculator** (`tools/dmx-calculator/index.html`) becomes part of the **Patch** screen. What it does today: a 10-switch DIP panel where switches 1–8 count 1, 2, 4 … 128 (9 and 10 are not used for the address), both directions (switches → address and address → switches), and an option "binary sum + 1" for fabrikanten that count from 0. In the suite it gets:
+- **Per fixture profile:** number of DIP switches, which switches are address bits (some fixtures use switch 9 = 256 to reach 257–512), and the counting rule (sum or sum + 1). So the right pattern is shown per fixture without ticking a box.
+- **Two fixes:** (1) with 8 address switches the highest address is 255 (256 with "+1"), but the input allows up to 512: today an address like 300 silently shows the pattern for 255. The suite version will refuse it with "dit apparaat kan maximaal adres 255" or use switch 9 where the fixture has it. (2) All switches off shows address 0, which isn't a valid DMX address (1–512): show a warning instead.
+- **What the calculator didn't do yet:** next free address after the previous fixture (address + channel count), overlap check across the rig, the DIP pattern next to each fixture on a printable **patch sheet** for the gig (and in Gig Day's set-up step).
+- Look: suite tokens (black, orange accent, JetBrains Mono) instead of its own teal colours; same switch drawing, big enough to tap on a phone in a dark venue.
 
 ### 3.3 Beat sync: options, best first
 
@@ -362,11 +367,16 @@ Every step below makes a **draft**. Nothing is published until you confirm it (�
 1. Gig becomes **confirmed** (app 1) → draft "announcement" post if the gig is public (festival, dorpsfeest, carnaval) — **never for private parties** unless the client agreed (portal tick box, §11).
 2. **Day of** → "TONIGHT!" story: venue, city, time, Funqtion style. Ready at 12:00, publish at 17:00 (settings).
 3. **Next morning** (with the app 6 wrap-up) → "BEDANKT {eventName}!" carousel draft with the best 3–10 photos that are `promo_ok`.
-4. **Visuals**: templates in three ways: (a) a still made in-app from brand templates (canvas, our fonts and colours), (b) **Hyperframes prompt generator** (Q1: where is it?) to produce a prompt/visual, (c) **Remotion** compositions for video (countdown, "tonight", aftermovie teaser) with props from the gig (`videoJobs`).
+4. **Visuals**: templates in three ways: (a) a still made in-app from brand templates (canvas, our fonts and colours), (b) **HyperFrames** and (c) **Remotion**, both used through **Claude Code** on the Mac:
+   - Promo exports a **video brief** per post: a small JSON + text file with the gig data (event name, venue, city, date, time, event type), the chosen photos/clips, the caption, the format (9:16 reel/story, 1:1 or 4:5 feed) and the brand kit (colours `#040404`/`#f68712`, JetBrains Mono + Archivo Black, logo files, FEEL THE MUSIQ end card).
+   - You open Claude Code with the HyperFrames plugin or the Remotion skills, give it the brief ("maak de tonight-reel"), it writes the composition and renders the MP4 locally.
+   - The MP4 goes back into the media library (drag in, or the app watches an `exports/` folder) and is linked to the post (`videoJobs.outputAssetId`).
+   - Reusable compositions (countdown, tonight, thank-you, aftermovie teaser) are saved in the repo under `tools/video/` so every render looks the same; each new one starts from those.
+   - Both need Node and a browser engine on the Mac; nothing renders in the browser app.
 5. **Confirm**: at the planned time a reminder "Klaar om te posten" appears on the phone. You check it and post it (media saved + caption copied + Instagram opens), or later tap **"Plaats nu"** to publish via the API at that moment. Status becomes `published` only after that confirmation. There is no automatic publishing, also not via a timer on a server.
 6. **Stats** are fetched daily; the calendar shows a small score per post.
 
-**Remotion note ⚠️:** Remotion is free for individuals and companies with up to 3 employees, also commercially. **Automated/programmatic rendering** (e.g. our server rendering videos without someone pressing a button) falls under "Remotion for Automators", which needs purchased renders; and the licence changes with v5. So: render **from the Mac by hand** in the MVP (free tier), and check the licence before automating.
+**Licence note ⚠️:** HyperFrames is open source (check its licence in the repo when we start). Remotion is free for individuals and companies with up to 3 employees, also commercially. **Automated/programmatic rendering** (e.g. our server rendering videos without someone pressing a button) falls under "Remotion for Automators", which needs purchased renders; and the licence changes with v5. So: render **from the Mac by hand** in the MVP (free tier), and check the licence before automating.
 
 ---
 
@@ -458,7 +468,7 @@ Legend: **D** = desktop/laptop (hub, Tauri), **T** = tablet behind the decks (la
 | **Kalender** | D, P | Month/week grid of posts by status and format, gigs shown as markers, "make draft" from a gig, drag to move. |
 | **Post editor** | D, P | Media picker, caption NL (EN optional), hashtags, preview as feed/story/reel (Instagram-like frame), publish mode (API/manual), planned time, checks (limit, private party, consent of people in photos). |
 | **Media library** | D, P (upload) | Grid with filters (gig, kind, people, usage), consent status per photo, tags, upload from phone after the gig, logos/fonts/colours tab (brand kit). |
-| **Generators** | D | Templates: announcement / tonight / thank-you; Hyperframes prompt; Remotion compositions with props from the gig; render queue (`videoJobs`). |
+| **Generators** | D | Templates: announcement / tonight / thank-you; "Video brief" export for HyperFrames/Remotion in Claude Code; list of video jobs waiting for an MP4 (`videoJobs`). |
 | **Stats** | D | Per post and over time: reach, views, saves, followers; best post types and times. |
 | **"Klaar om te posten"** | P | Reminder → shows media (save to camera roll) and the caption (copy) → opens Instagram, then "Gepost" to confirm. Later a "Plaats nu" button (API, still a manual tap). |
 
@@ -525,7 +535,7 @@ If the light show is the most urgent for an upcoming season (e.g. carnaval), Lig
 | **Public parts** | **Now: local mode**: static pages in the hub's GitHub Pages build, data inside the link, answers by message (§0.1). **Later (on your word):** a free Cloudflare Worker + D1 on `*.workers.dev`, or your own self-hosted server. | Gijs: local until he says self-hosted. |
 | **Public pages** | Portal and feedback: a tiny separate Vite build (no full suite JS, < 100 KB), served by the Worker. Press Kit: static HTML in funqtion-site on GitHub Pages. | Fast on a guest's phone; nothing of our admin code is public. |
 | **Instagram** | Stats read by the desktop app (token on the device, never in the repo). "Plaats nu" later via the relay for the temporary public media URL. No scheduler: every post is confirmed by hand. | Gijs's rule: nothing goes out without a manual confirmation. |
-| **Video** | Remotion on the Mac (Node + Chrome) by hand ⚠️ licence for automation. Hyperframes and the Remotion compositions: from the chats into the repo first (Q1). | Rendering can't run in the browser at good quality. |
+| **Video** | HyperFrames plugin and Remotion skills in **Claude Code** on the Mac, fed by a video brief exported from Promo; MP4 back into the media library; shared compositions in `tools/video/`. ⚠️ Remotion licence for automation. | Rendering can't run in the browser at good quality. |
 | **PDF** | Same PDF code as quotes/invoices/contracts (app 2/4). | One look. |
 | **Backups** | Local data in the existing backup ZIP (v2, optional encryption). The relay only holds copies and incoming answers, which devices pull into Dexie; media originals stay on our devices. | The relay is replaceable. |
 | **Costs** | €0 hosting. No new light hardware (Daslight DVC Gold + SoundSwitch Micro owned); SoundSwitch software subscription if you keep using it ⚠️. | "No paid hosting" decision. |
@@ -588,9 +598,9 @@ Rule for everything outside: the **logo files from funqtion-site** are the sourc
 
 ## 12. Open questions
 
-Answered (November 2026): tools live in chats (Q1), interfaces Daslight DVC Gold + SoundSwitch Micro (Q2), Instagram probably Business with manual confirmation for every post (Q4), website stays on github.io (Q6), no home server (Q7), no Google Business Profile (Q9), **local until "self-hosted"** (Q17), **SoundSwitch = all lights, Daslight = laser only** (Q2b), **Serato + local files when light sync matters, else djay** (Q2c), **SoundSwitch subscription stays** (Q16), **no remote e-stop on the laser** (Q3). Still open:
+Answered (November 2026): DMX calculator added to the repo, HyperFrames and Remotion are Claude Code plugins (Q1), interfaces Daslight DVC Gold + SoundSwitch Micro (Q2), Instagram probably Business with manual confirmation for every post (Q4), website stays on github.io (Q6), no home server (Q7), no Google Business Profile (Q9), **local until "self-hosted"** (Q17), **SoundSwitch = all lights, Daslight = laser only** (Q2b), **Serato + local files when light sync matters, else djay** (Q2c), **SoundSwitch subscription stays** (Q16), **no remote e-stop on the laser** (Q3). Still open:
 
-1. **DMX calculator, Hyperframes prompt generator, Remotion videos:** paste the code from the chats into the repo (e.g. `tools/dmx-calculator/`, `tools/hyperframes/`, `tools/remotion/`), or send it in a message.
+1. **Videos you already made with HyperFrames/Remotion:** if you want them as starting templates, put their project folders (or the final MP4s) somewhere I can reach, e.g. `tools/video/` in this repo.
 2. **Fixtures and DMX addresses:** you'll add them later (in the Gear app, so Lights can use them).
 3. **Laser e-stop:** will you connect a remote interlock / e-stop button (§3.5)? Until then the app blocks audience scanning and asks for an operator next to the key switch. Who operates the laser at gigs?
 4. **Instagram:** check in the app (Settings → Account type) whether it's **Business**. Who confirms posts: both of you?
