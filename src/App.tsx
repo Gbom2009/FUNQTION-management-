@@ -13,10 +13,13 @@ import GearApp from './apps/gear/GearApp';
 import GigDayApp from './apps/gigday/GigDayApp';
 import PromoApp from './apps/promo/PromoApp';
 import PressKitApp from './apps/presskit/PressKitApp';
+import FeedbackApp from './apps/feedback/FeedbackApp';
 import Settings from './settings/Settings';
 
 // Maps (MapLibre, voice, routing) is big: it loads only when you open it.
 const MapsApp = lazy(() => import('./apps/maps/MapsApp'));
+// Public pages for clients and guests: no login, own small chunk.
+const FeedbackPage = lazy(() => import('./public/FeedbackPage'));
 
 function Gate() {
   const { locked } = useSession();
@@ -33,6 +36,7 @@ function Gate() {
       <Route path="/gigday/*" element={<GigDayApp />} />
       <Route path="/promo/*" element={<PromoApp />} />
       <Route path="/presskit/*" element={<PressKitApp />} />
+      <Route path="/feedback/*" element={<FeedbackApp />} />
       <Route path="/maps/*" element={<Suspense fallback={<main className="main"><p className="muted">…</p></main>}><MapsApp /></Suspense>} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -45,11 +49,16 @@ function Gate() {
 export default function App() {
   return (
     <HashRouter>
-      <SessionProvider>
-        <ToastProvider>
-          <Gate />
-        </ToastProvider>
-      </SessionProvider>
+      <Routes>
+        <Route path="/f/:data" element={<Suspense fallback={null}><FeedbackPage /></Suspense>} />
+        <Route path="*" element={
+          <SessionProvider>
+            <ToastProvider>
+              <Gate />
+            </ToastProvider>
+          </SessionProvider>
+        } />
+      </Routes>
     </HashRouter>
   );
 }

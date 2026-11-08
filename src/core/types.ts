@@ -511,6 +511,10 @@ export interface Settings {
   brand?: Partial<BrandKit>;
   promoTonightAt?: string;         // HH:mm reminder for the "tonight" story
   promoThanksAt?: string;          // HH:mm next morning
+  // ---- Client-facing pages (apps 13, 14) ----
+  publicAppUrl?: string;           // where the hub's public pages live (default: GitHub Pages)
+  answerWhatsApp?: string;         // number clients send their answers to (default: bizPhone)
+  feedbackReminderDays?: number;   // remind once after this many days (default 5)
 }
 
 export const DEFAULT_SETTINGS: Settings = {

@@ -25,7 +25,7 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 | 11 | **Promo** – Instagram calendar, media library, post drafts, consents, video briefs | ✅ v0.10 ([plan](docs/stage-and-clients/PLAN.md)) |
 | 12 | **Press Kit** – public EPK pages for the website, PDF, SEO basics | ✅ v0.11 ([plan](docs/stage-and-clients/PLAN.md)) |
 | 13 | **Client Portal** – private page per gig: quote, contract, invoices, music wishes | plan ([plan](docs/stage-and-clients/PLAN.md)) |
-| 14 | **Feedback** – post-gig feedback form, testimonials, review prompt | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 14 | **Feedback** – post-gig feedback form (local mode, answers by WhatsApp/e-mail), reviews, permission | ✅ v0.12 ([plan](docs/stage-and-clients/PLAN.md)) |
 | – | **Navigatie** (Maps, merged from FQ-maps) | ✅ v0.8 ([plan](docs/maps/PLAN.md)) |
 
 ## Getting the Windows exe

@@ -113,6 +113,13 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Publishing:** "ZIP voor de website maken" downloads a ZIP to unpack in the root of funqtion-site (adds only presskit/, en/presskit/, sitemap.xml, robots.txt) and push. PDFs (NL/EN, A4) come from `domain/pdf.ts` via the shared pdfmake setup.
 - **PDF fix for the whole suite:** JetBrains Mono's ligatures ("...", "--", "//", "==") made pdfmake hang. `invoicing/domain/pdfText.ts` puts an invisible U+FEFF between punctuation pairs in every definition before rendering (quotes, invoices, contracts, labels, press kit).
 
+## App 14: Feedback and local-mode links (v0.12.0)
+
+- **Local mode for client pages** (`src/core/share.ts`, plan §0.1): no server. The data a page needs travels inside the link after `#` (JSON → deflate → base64url), which browsers never send to a server; the page is a public route of this same app on GitHub Pages (`Settings.publicAppUrl`, default `DEFAULT_PUBLIC_URL`). Public routes (`#/f/…`, later `#/c/…`) sit outside the login (`src/public/`, lazy-loaded, `noindex`, `no-referrer`). The client's answer comes back as a WhatsApp/e-mail message ending in an `FQ1:` code; "Plak antwoord" reads every code in pasted text (wrapped lines are joined).
+- Lives in `src/apps/feedback/` (route `/feedback`). No new tables: it uses `reviews` (extended with scores, highlights, `mayUseName`, `displayName`, `source`, `approvedAt`) and the shared `consents` (testimonial_public / testimonial_name, as proof of permission).
+- **Pure, tested domain** `domain/feedback.ts`: request payload, answer cleaning (clamps, whitelists), the client's message, applying an answer (review fields + consents + low-score flag → a "call back" task), reminder once after `Settings.feedbackReminderDays` (5), summary (average, recommend score, per event type, highlights).
+- Gig Day's wrap-up thank-you uses the feedback link as `{{reviewLink}}` when no Google review link is set. The Google button on the form shows for everyone (no review gating) and only when `Settings.reviewLink` exists.
+
 ## Navigatie: Funqtion Maps (merged from FQ-maps, v0.8.0)
 
 - Lives in `src/apps/maps/` (copied from github.com/Gbom2009/FQ-maps, phases 1–5; its original spec is `docs/maps/FQ-MAPS-SPEC.md`, the merge plan `docs/maps/PLAN.md`). Route `/maps`, **lazy-loaded** (`React.lazy` in `src/App.tsx`), so MapLibre, routing and the voice code only load when Maps opens. Static data in `public/maps/` (milieuzones, NL/BE outline, glyph fonts), data scripts in `scripts/maps/`. External endpoints stay in `src/apps/maps/config/services.ts`.
