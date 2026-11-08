@@ -517,6 +517,8 @@ export interface Settings {
   publicAppUrl?: string;           // where the hub's public pages live (default: GitHub Pages)
   answerWhatsApp?: string;         // number clients send their answers to (default: bizPhone)
   feedbackReminderDays?: number;   // remind once after this many days (default 5)
+  // ---- Lights (app 10) ----
+  light?: Partial<LightSettings>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1392,3 +1394,62 @@ export interface Portal extends Base {
   sentAt?: string;
   lastAnswerAt?: string;
 }
+
+// ---- App 10 – Lights (Daslight + SoundSwitch via MIDI) -------------------------
+
+export type LightController = 'soundswitch' | 'daslight';
+export interface LightFixture extends Base {
+  name: string;                // "Lichtbar", "Laser"
+  gearItemId?: ID;             // app 5
+  controller: LightController; // which program/interface drives it (Gijs: SoundSwitch = lights, Daslight = laser)
+  universe: number;            // 1 (SoundSwitch Micro), 1–2 (Daslight DVC Gold)
+  address: number;             // 1–512
+  channels: number;            // DMX footprint in the chosen mode
+  mode?: string;               // "14ch"
+  dip?: { switches: number; addressBits: number; plusOne: boolean };
+  isLaser?: boolean;
+  notes?: string;
+}
+export type CueKind = 'scene' | 'moment' | 'blackout' | 'laser';
+export type MomentKind = 'drop' | 'strobe' | 'first_dance' | 'entrance' | 'countdown' | 'cake' | 'last_song' | 'custom';
+export interface LightCue extends Base {
+  label: string;
+  kind: CueKind;
+  moment?: MomentKind;
+  laserRole?: 'on' | 'off';    // kind laser: what it does in Daslight
+  controller: LightController;
+  midi?: { type: 'note' | 'cc' | 'pc'; channel: number; number: number; value: number };
+  colour?: string;             // tile colour on the live screen
+  eventTypes: EventType[];     // empty = all
+  sections: ('warmup' | 'build' | 'peak' | 'cooldown' | 'afterparty')[]; // empty = all
+  strobe?: boolean;
+  usesLaser?: boolean;         // a scene that also fires the laser (blocked by the laser gate)
+  hold?: boolean;              // note-on while pressed, note-off on release (flash buttons)
+  order?: number;
+  testedAt?: string;
+}
+export interface LightShow extends Base {
+  gigId?: ID;
+  startedAt: string;
+  endedAt?: string;
+  operator: MemberId;
+  operatorAtKey?: boolean;     // confirmed: someone stays at the laser key (no remote e-stop)
+  checks?: Record<string, boolean>; // laser checklist (same keys as app 5's packing list)
+  crowdScan?: boolean;
+  crowdPermission?: string;
+  crowdMeasured?: boolean;
+}
+export interface LightLog extends Base {
+  showId: ID;
+  gigId?: ID;
+  at: string;
+  event: 'show_start' | 'show_end' | 'cue' | 'moment' | 'blackout' | 'laser_on' | 'laser_off' | 'estop' | 'bpm' | 'midi_error';
+  detail?: string;
+}
+export interface LightSettings {
+  midiOutput?: string;         // name of the MIDI output (e.g. "IAC-stuurprogramma Bus 1", "loopMIDI Port")
+  remoteEstop: boolean;        // a remote interlock/e-stop is connected to the laser (Gijs: not yet)
+  strobeOff: EventType[];      // event types without strobe
+  maxStrobeHz: number;
+}
+export const DEFAULT_LIGHT: LightSettings = { remoteEstop: false, strobeOff: ['wedding'], maxStrobeHz: 3 };

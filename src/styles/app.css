@@ -491,3 +491,21 @@ body.night .scanner-view { filter: none; }
 .public-choice { min-height: var(--touch); padding: var(--s2) var(--s3); border: var(--fq-rule); }
 .public .btn { min-height: 52px; justify-content: center; }
 .public-head .logo { background: #040404; padding: 4px; box-sizing: content-box; }
+
+/* ---------- Lights: stage mode (dark booth, big targets, red only for stop) ---------- */
+.lt-live { display: flex; flex-direction: column; gap: var(--s4); }
+.lt-live.stage { min-height: 100dvh; padding: var(--s4) var(--gutter) var(--s8); background: #000; color: #d9d9d9; --fq-surface: #000; --fq-text: #d9d9d9; --fq-text-strong: #f0f0f0; color-scheme: dark; }
+.lt-top { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.lt-tap { min-width: 120px; min-height: 52px; font-variant-numeric: tabular-nums; }
+.lt-safety { display: grid; grid-template-columns: 2fr 1fr; gap: var(--s3); }
+.lt-stop, .lt-blackout { min-height: 72px; border: 2px solid; font: inherit; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.lt-stop { background: #b3261e; border-color: #ff7a7a; color: #fff; font-size: 1.1rem; }
+.lt-blackout { background: #000; border-color: #6c6c6c; color: #f0f0f0; }
+.lt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s2); }
+.lt-grid.moments { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.lt-tile { min-height: 84px; background: color-mix(in srgb, var(--tile) 16%, #0c0c0c); border: 1px solid color-mix(in srgb, var(--tile) 55%, #363636); border-left: 6px solid var(--tile); color: #f0f0f0; font: inherit; font-size: var(--fq-size-body); text-align: left; padding: var(--s3); cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; touch-action: manipulation; user-select: none; }
+.lt-tile.big { min-height: 100px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.lt-tile:active { background: color-mix(in srgb, var(--tile) 45%, #0c0c0c); }
+.lt-tile:disabled { opacity: 0.35; cursor: not-allowed; }
+.lt-laser { border: var(--fq-rule); padding: var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+.lt-log { border-top: var(--fq-rule); padding-top: var(--s2); }

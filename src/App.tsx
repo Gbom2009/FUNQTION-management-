@@ -15,6 +15,7 @@ import PromoApp from './apps/promo/PromoApp';
 import PressKitApp from './apps/presskit/PressKitApp';
 import FeedbackApp from './apps/feedback/FeedbackApp';
 import PortalApp from './apps/portal/PortalApp';
+import LightsApp from './apps/lights/LightsApp';
 import Settings from './settings/Settings';
 
 // Maps (MapLibre, voice, routing) is big: it loads only when you open it.
@@ -40,6 +41,7 @@ function Gate() {
       <Route path="/presskit/*" element={<PressKitApp />} />
       <Route path="/feedback/*" element={<FeedbackApp />} />
       <Route path="/portal/*" element={<PortalApp />} />
+      <Route path="/lights/*" element={<LightsApp />} />
       <Route path="/maps/*" element={<Suspense fallback={<main className="main"><p className="muted">…</p></main>}><MapsApp /></Suspense>} />
       <Route path="/settings" element={<main className="main" style={{ maxWidth: 1200, margin: '0 auto' }}><Settings /></main>} />
       <Route path="*" element={<Navigate to="/" replace />} />
