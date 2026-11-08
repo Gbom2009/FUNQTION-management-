@@ -97,6 +97,14 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Sharing with the other phone:** "Plan delen" writes a small backup-format file of this gig day (gig, venue, steps, tasks, log, notes); "Plan importeren" merges it (newest change per record wins; logs are append-only).
 - **Route:** `/maps?gig=<id>` plans home → the loading entrance (or address) with the DJ gear trailer for a standard set-up; `&pick=1` starts placing the loading-door pin. Maps waits for its first database read before planning.
 
+## App 10: Lights (v0.14.0)
+
+- Lives in `src/apps/lights/` (route `/lights`; stage screen `/lights/stage` without app chrome). **Dexie version 11:** `lightFixtures` (patch: controller, universe, address, channels, mode, DIP config, gear link), `lightCues` (live buttons → one MIDI message each; kind scene/moment/blackout/laser, colour, sections, event types, strobe, hold, uses-laser), `lightShows` (per gig: laser checklist, operator at key, audience-scan permission/measurement), `lightLogs` (append-only show log).
+- **Gijs's set-up:** SoundSwitch drives all lights, Daslight only the laser. Both run their own interfaces, so the app does not output DMX: it sends **MIDI** (Web MIDI in Chrome/Edge, `midi.ts`) to a virtual port (IAC on Mac, loopMIDI on Windows) that SoundSwitch and Daslight map with MIDI learn. Default buttons (`DEFAULT_CUES`): channel 1 → SoundSwitch, channel 2 → Daslight.
+- **Pure, tested domain:** `domain/dmx.ts` (Gijs's DIP calculator from `tools/dmx-calculator/` per fixture, with the fixes: unreachable addresses refused, address 0 invalid; next free address; overlaps), `domain/live.ts` (MIDI bytes, duplicate mappings, tap tempo, laser gate, visible scenes per event type/section with strobe off, next timeline moment, laser hours from the log).
+- **Laser safety:** laser cues and scenes that use the laser pass `laserGate`: the checklist (shared with app 5's packing list), and without a remote e-stop (`Settings.light.remoteEstop`, default false) a confirmed operator at the key; audience scanning is blocked without a remote e-stop, permission and a measurement. LASER STOP (button or Esc) sends every "laser off" cue and is logged; the UI says the hardware key is the real stop.
+- Not yet: tablet remote over LAN and Ableton Link (need the desktop app's native side), DMX output of our own.
+
 ## App 11: Promo (local mode, v0.10.0)
 
 - Lives in `src/apps/promo/` (route `/promo`). Plan: `docs/stage-and-clients/PLAN.md` (apps 10–14).

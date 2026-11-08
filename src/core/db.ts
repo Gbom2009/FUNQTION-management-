@@ -8,6 +8,7 @@ import type {
   DayTask, GigLog, TaskTemplate, TimelineStep, VenueNote,
   Consent, MediaAsset, Post, VideoJob,
   Epk, EpkPublish, Portal,
+  LightCue, LightFixture, LightLog, LightShow,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -88,6 +89,11 @@ export class FunqtionDB extends Dexie {
   epkPublishes!: Table<EpkPublish, string>;
   // app 13: Client Portal
   portals!: Table<Portal, string>;
+  // app 10: Lights
+  lightFixtures!: Table<LightFixture, string>;
+  lightCues!: Table<LightCue, string>;
+  lightShows!: Table<LightShow, string>;
+  lightLogs!: Table<LightLog, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -186,6 +192,13 @@ export class FunqtionDB extends Dexie {
     this.version(10).stores({
       portals: 'id, &gigId, updatedAt',
     });
+    // App 10 – Lights (patch, MIDI cues for SoundSwitch/Daslight, shows + log).
+    this.version(11).stores({
+      lightFixtures: 'id, controller, updatedAt',
+      lightCues: 'id, kind, controller, updatedAt',
+      lightShows: 'id, gigId, startedAt, updatedAt',
+      lightLogs: 'id, showId, gigId, at, updatedAt',
+    });
   }
 }
 
@@ -209,5 +222,6 @@ export const DATA_TABLES = [
   'timelineSteps', 'dayTasks', 'taskTemplates', 'gigLogs', 'venueNotes',
   'consents', 'mediaAssets', 'posts', 'videoJobs',
   'epk', 'epkPublishes', 'portals',
+  'lightFixtures', 'lightCues', 'lightShows', 'lightLogs',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

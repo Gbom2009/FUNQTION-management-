@@ -21,7 +21,7 @@ All apps live in this one repository and come together in one **Funqtion Hub**: 
 | 05 | **Gear & Inventory** – register, QR labels, kits, packing lists, maintenance, laser checklist | ✅ v0.5 ([plan](docs/gear-inventory/PLAN.md)) |
 | 06 | **Gig Day** – timeline, tasks, Booth mode, wrap-up | ✅ v0.9 ([plan](docs/gig-day/PLAN.md)) |
 | 07–09 | **Library, Sets, Requests** | plan ([plan](docs/music/PLAN.md)) |
-| 10 | **Lights** – DMX scenes, moment buttons, beat sync, laser safety | plan ([plan](docs/stage-and-clients/PLAN.md)) |
+| 10 | **Lights** – live buttons for SoundSwitch/Daslight via MIDI, DMX patch with DIP calculator, laser safety, show log | ✅ v0.14 ([plan](docs/stage-and-clients/PLAN.md)) |
 | 11 | **Promo** – Instagram calendar, media library, post drafts, consents, video briefs | ✅ v0.10 ([plan](docs/stage-and-clients/PLAN.md)) |
 | 12 | **Press Kit** – public EPK pages for the website, PDF, SEO basics | ✅ v0.11 ([plan](docs/stage-and-clients/PLAN.md)) |
 | 13 | **Client Portal** – own page per gig in a link: times, contacts, document status, music wishes back | ✅ v0.13 ([plan](docs/stage-and-clients/PLAN.md)) |
