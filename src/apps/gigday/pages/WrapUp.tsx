@@ -16,6 +16,7 @@ import type { Overtime } from '../domain/overtime';
 import { delay } from '../domain/timeline';
 import { hhmm, useGigCtx } from '../components';
 import { logLine } from './Log';
+import { feedbackLink } from '../../feedback/data';
 
 /** The next morning: everything prepared, one tap each. */
 export default function WrapUp() {
@@ -33,12 +34,15 @@ export default function WrapUp() {
   const templates = q(() => db.templates.toArray(), []) as Template[];
   const [ot, setOt] = useState<Overtime | null>(null);
   useEffect(() => { void overtimeFor(gig.id).then(setOt); }, [gig.id, logs.length, steps]);
+  // No Google profile: the review link is our own feedback form (app 14).
+  const [fbLink, setFbLink] = useState('');
+  useEffect(() => { void feedbackLink(gig).then((r) => setFbLink(r.link)); }, [gig]);
 
   const items = wrapUpItems({ gig, day, venue, trips, invoices, reviews, logs, openGearIssues: issues.length, venueNotesToday: notes.length, hasAcceptedQuote: accepted, today: todayStr() });
   const client = persons.find((p) => p.id === gig.clientPersonId);
   const lang = client?.language ?? settings.language;
   const tpl = templates.find((x) => !x.deletedAt && x.kind === 'thank_you_review' && x.language === lang);
-  const body = tpl ? fillTemplate(tpl.body, { firstName: client?.firstName, gigTitle: gig.title, reviewLink: settings.reviewLink, sender: meMember?.name }) : '';
+  const body = tpl ? fillTemplate(tpl.body, { firstName: client?.firstName, gigTitle: gig.title, reviewLink: settings.reviewLink || fbLink, sender: meMember?.name }) : '';
   const subject = tpl?.subject ? fillTemplate(tpl.subject, { gigTitle: gig.title }) : gig.title;
 
   const row = (it: WrapItem, title: string, children: React.ReactNode) => (
@@ -77,7 +81,7 @@ export default function WrapUp() {
           {client?.email && <a className="btn" href={mailtoLink(client.email, subject, body)} onClick={() => void wrapThanks(gig)}>E-mail</a>}
           <button className="btn ghost small" onClick={() => void wrapThanks(gig)}>{t('gd.markSent')}</button>
         </div>
-        {!settings.reviewLink && <p className="tiny muted">{t('gd.noReviewLink')}</p>}
+        {!settings.reviewLink && !fbLink && <p className="tiny muted">{t('gd.noReviewLink')}</p>}
       </>)}
 
       {row(get('gear'), t('gd.wrap.gear'), <>
