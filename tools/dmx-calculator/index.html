@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMX DIP Switch Calculator</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #1a1d24;
+    --accent: #ff5e3a;
+    --accent2: #4ecdc4;
+    --text: #e8e8ea;
+    --muted: #8a8f99;
+    --on: #4ecdc4;
+    --off: #2a2e38;
+    --border: #2e323c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap {
+    max-width: 640px;
+    width: 100%;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    letter-spacing: 0.5px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    margin: 0 0 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .switches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .switch-col {
+    flex: 1;
+    min-width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .switch-col.disabled {
+    opacity: 0.35;
+  }
+  .switch-track {
+    width: 36px;
+    height: 64px;
+    background: var(--off);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .switch-track.disabled {
+    cursor: not-allowed;
+  }
+  .switch-track.on {
+    background: rgba(78, 205, 196, 0.12);
+  }
+  .switch-thumb {
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    height: 28px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #4a4f5c, #353944);
+    border: 1px solid #454a57;
+    transition: top 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    top: 3px;
+  }
+  .switch-track.on .switch-thumb {
+    top: 33px;
+    background: linear-gradient(180deg, var(--on), #38a39c);
+    border-color: #5ee0d8;
+  }
+  .switch-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .switch-val {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .onoff-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    height: 14px;
+  }
+  .result {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .result .value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  .result .label {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  input[type="number"] {
+    background: var(--off);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 1.1rem;
+    width: 110px;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent2);
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .checkbox-row input { width: 16px; height: 16px; }
+  .pattern {
+    margin-top: 12px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    color: var(--accent2);
+  }
+  .footnote {
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DMX DIP Switch Calculator</h1>
+  <div class="sub">10-switch DIP panel · switches 9 &amp; 10 unused for addressing</div>
+
+  <div class="panel">
+    <h2>Switch panel → DMX adres</h2>
+    <div class="switches" id="switchPanel"></div>
+    <div class="result">
+      <div class="value" id="addressOut">1</div>
+      <div class="label">DMX adres</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>DMX adres → Switch instelling</h2>
+    <div class="input-row">
+      <input type="number" id="addressInput" min="1" max="512" value="11">
+      <span class="label" style="color:var(--muted)">DMX adres (1–512)</span>
+    </div>
+    <div class="pattern" id="patternOut">1-1-0-1-0-0-0-0</div>
+    <div class="footnote">1 = ON (omhoog/aan), 0 = OFF. Volgorde = switch 1 t/m 8.</div>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-bottom:8px;">Toelichting</h2>
+    <div class="footnote">
+      Elke switch staat voor een binaire waarde: switch 1 = 1, switch 2 = 2, switch 3 = 4, switch 4 = 8,
+      switch 5 = 16, switch 6 = 32, switch 7 = 64, switch 8 = 128. Het DMX adres is de som van de
+      ingeschakelde (ON) waarden, plus eventueel +1 als jouw apparaat zo telt (zie optie hieronder).
+      Switches 9 en 10 worden meestal gebruikt voor andere instellingen (bijv. dimmer curve, modus) en
+      niet voor het DMX adres.
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="plusOne">
+      <label for="plusOne">Binaire som + 1 = DMX adres (sommige fabrikanten gebruiken deze telling)</label>
+    </div>
+  </div>
+</div>
+
+<script>
+const SWITCH_COUNT = 10;
+const ADDRESS_BITS = 8; // switches 1-8 used for addressing
+const panel = document.getElementById('switchPanel');
+const addressOut = document.getElementById('addressOut');
+const addressInput = document.getElementById('addressInput');
+const patternOut = document.getElementById('patternOut');
+const plusOne = document.getElementById('plusOne');
+
+let switches = new Array(SWITCH_COUNT).fill(false);
+
+function buildPanel() {
+  panel.innerHTML = '';
+  for (let i = 0; i < SWITCH_COUNT; i++) {
+    const isAddressSwitch = i < ADDRESS_BITS;
+    const col = document.createElement('div');
+    col.className = 'switch-col' + (isAddressSwitch ? '' : ' disabled');
+
+    const onLabel = document.createElement('div');
+    onLabel.className = 'onoff-label';
+    onLabel.textContent = '';
+
+    const track = document.createElement('div');
+    track.className = 'switch-track' + (isAddressSwitch ? '' : ' disabled');
+    const thumb = document.createElement('div');
+    thumb.className = 'switch-thumb';
+    track.appendChild(thumb);
+
+    if (isAddressSwitch) {
+      track.addEventListener('click', () => {
+        switches[i] = !switches[i];
+        update();
+      });
+    }
+
+    const numLabel = document.createElement('div');
+    numLabel.className = 'switch-label';
+    numLabel.textContent = (i + 1);
+
+    const valLabel = document.createElement('div');
+    valLabel.className = 'switch-val';
+    valLabel.textContent = isAddressSwitch ? Math.pow(2, i) : '—';
+
+    col.appendChild(track);
+    col.appendChild(numLabel);
+    col.appendChild(valLabel);
+    panel.appendChild(col);
+
+    col._track = track;
+  }
+}
+
+function update() {
+  // update visuals
+  const cols = panel.children;
+  for (let i = 0; i < SWITCH_COUNT; i++) {
+    const track = cols[i]._track;
+    if (switches[i]) {
+      track.classList.add('on');
+    } else {
+      track.classList.remove('on');
+    }
+  }
+  // compute address
+  let sum = 0;
+  for (let i = 0; i < ADDRESS_BITS; i++) {
+    if (switches[i]) sum += Math.pow(2, i);
+  }
+  const address = plusOne.checked ? sum + 1 : sum;
+  addressOut.textContent = address;
+}
+
+function patternFromAddress(addr) {
+  let value = plusOne.checked ? addr - 1 : addr;
+  if (value < 0) value = 0;
+  if (value > 255) value = 255;
+  const bits = [];
+  for (let i = 0; i < ADDRESS_BITS; i++) {
+    bits.push((value >> i) & 1);
+  }
+  return bits;
+}
+
+function updateFromAddressInput() {
+  let addr = parseInt(addressInput.value, 10);
+  if (isNaN(addr)) addr = 1;
+  if (addr < 1) addr = 1;
+  if (addr > 512) addr = 512;
+  addressInput.value = addr;
+
+  const bits = patternFromAddress(addr);
+  patternOut.textContent = bits.join('-');
+
+  // also reflect onto the switch panel
+  for (let i = 0; i < ADDRESS_BITS; i++) {
+    switches[i] = bits[i] === 1;
+  }
+  update();
+}
+
+addressInput.addEventListener('input', updateFromAddressInput);
+plusOne.addEventListener('change', () => {
+  update();
+  updateFromAddressInput();
+});
+
+buildPanel();
+updateFromAddressInput();
+</script>
+</body>
+</html>
