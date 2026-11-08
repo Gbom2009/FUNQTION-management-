@@ -6,6 +6,7 @@ import type {
   GearIssue, GearItem, GearKit, GearLocation, GearMovement, GearPhoto, GearRental, MaintenanceLog, MaintenancePlan, PackList, SafetyTest, WishItem,
   GigDay, TrackRecord, VehicleRecord, VenuePhoto,
   DayTask, GigLog, TaskTemplate, TimelineStep, VenueNote,
+  Consent, MediaAsset, Post, VideoJob,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -76,6 +77,11 @@ export class FunqtionDB extends Dexie {
   taskTemplates!: Table<TaskTemplate, string>;
   gigLogs!: Table<GigLog, string>;
   venueNotes!: Table<VenueNote, string>;
+  // Shared 10–14 + app 11: Promo
+  consents!: Table<Consent, string>;
+  mediaAssets!: Table<MediaAsset, string>;
+  posts!: Table<Post, string>;
+  videoJobs!: Table<VideoJob, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -158,6 +164,13 @@ export class FunqtionDB extends Dexie {
       gigLogs: 'id, gigId, at, type, updatedAt',
       venueNotes: 'id, venueId, gigId, updatedAt',
     });
+    // Shared consents + App 11 – Promo (media library, posts, video briefs).
+    this.version(8).stores({
+      consents: 'id, purpose, gigId, personId, updatedAt',
+      mediaAssets: 'id, kind, gigId, sha256, updatedAt',
+      posts: 'id, gigId, status, plannedAt, updatedAt',
+      videoJobs: 'id, postId, gigId, updatedAt',
+    });
   }
 }
 
@@ -179,5 +192,6 @@ export const DATA_TABLES = [
   'safetyTests', 'gearRentals', 'wishlist',
   'vehicles', 'venuePhotos', 'gigDays',
   'timelineSteps', 'dayTasks', 'taskTemplates', 'gigLogs', 'venueNotes',
+  'consents', 'mediaAssets', 'posts', 'videoJobs',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

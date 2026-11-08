@@ -498,6 +498,10 @@ export interface Settings {
   gearUnloadScan: 'group' | 'each';
   gearLabelPresets?: LabelPreset[];
   gigDay?: Partial<GigDayDefaults>; // App 6 timeline defaults (missing keys → DEFAULT_GIGDAY)
+  // ---- Promo (app 11) ----
+  brand?: Partial<BrandKit>;
+  promoTonightAt?: string;         // HH:mm reminder for the "tonight" story
+  promoThanksAt?: string;          // HH:mm next morning
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -1222,4 +1226,101 @@ export const DEFAULT_GIGDAY: GigDayDefaults = {
   avgSpeedTrailerKmh: 55,
   wrapUpAt: '10:00',
   dayBeforeAt: '18:00',
+};
+
+// ---- Shared for apps 10–14 (docs/stage-and-clients/PLAN.md §2) -------------
+
+export const CONSENT_PURPOSES = ['photo_promo', 'event_promo', 'testimonial_public', 'testimonial_name', 'audience_scan', 'marketing_email'] as const;
+export type ConsentPurpose = (typeof CONSENT_PURPOSES)[number];
+/** Who agreed to what, when. Withdrawal sets withdrawnAt; rows are never deleted. */
+export interface Consent extends Base {
+  purpose: ConsentPurpose;
+  gigId?: ID;
+  personId?: ID;
+  subjectName: string;
+  given: boolean;
+  scope?: string;             // "Instagram + website"
+  source: 'contract' | 'portal' | 'feedback_form' | 'in_person' | 'whatsapp' | 'email' | 'other';
+  evidence?: string;
+  at: string;                 // ISO
+  withdrawnAt?: string;
+}
+
+// ---- App 11 – Promo ----------------------------------------------------------
+
+export const MEDIA_KINDS = ['photo', 'video', 'logo', 'font', 'template', 'audio', 'doc'] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+export type MediaPeople = 'none' | 'crowd_unrecognisable' | 'recognisable';
+export type MediaUsage = 'internal' | 'promo_ok' | 'press_ok';
+/** One media library for Promo, Press Kit and the client portal. */
+export interface MediaAsset extends Base {
+  kind: MediaKind;
+  title: string;
+  mime: string;
+  blob?: Blob;                // stored on the device; in the backup ZIP under media/
+  externalUrl?: string;       // e.g. a YouTube/SoundCloud link instead of a file
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  tags: string[];
+  gigId?: ID;
+  venueId?: ID;
+  takenAt?: string;           // yyyy-mm-dd
+  photographer?: string;      // credit
+  people: MediaPeople;
+  usage: MediaUsage;
+  consentIds?: ID[];
+  sha256?: string;
+}
+
+export const POST_KINDS = ['announcement', 'tonight', 'thank_you', 'throwback', 'mix_release', 'other'] as const;
+export type PostKind = (typeof POST_KINDS)[number];
+export const POST_FORMATS = ['feed', 'carousel', 'reel', 'story'] as const;
+export type PostFormat = (typeof POST_FORMATS)[number];
+/** due = reminder time passed; published only after a person confirmed it (Gijs's rule). */
+export type PostStatus = 'idea' | 'draft' | 'ready' | 'published' | 'skipped';
+export interface PostStats { at: string; reach?: number; views?: number; likes?: number; comments?: number; saves?: number; shares?: number; follows?: number }
+export interface Post extends Base {
+  gigId?: ID;
+  kind: PostKind;
+  format: PostFormat;
+  status: PostStatus;
+  plannedAt?: string;         // ISO; a reminder time, never an automatic publish time
+  captionNl: string;
+  captionEn?: string;
+  hashtags: string[];
+  mediaIds: ID[];
+  confirmedBy?: MemberId;
+  confirmedAt?: string;
+  permalink?: string;
+  stats?: PostStats[];
+  note?: string;
+}
+
+export interface VideoJob extends Base {
+  postId?: ID;
+  gigId?: ID;
+  engine: 'hyperframes' | 'remotion' | 'other';
+  template: string;           // countdown / tonight / thank_you / aftermovie
+  status: 'brief' | 'done';
+  outputMediaId?: ID;
+}
+
+export interface BrandKit {
+  colours: string[];
+  fonts: string[];
+  tagline: string;
+  hashtags: string[];
+  captionFooterNl: string;
+  captionFooterEn: string;
+  instagram: string;
+}
+export const DEFAULT_BRAND: BrandKit = {
+  colours: ['#040404', '#f68712', '#f0f0f0'],
+  fonts: ['JetBrains Mono', 'Archivo Black'],
+  tagline: 'FEEL THE MUSIQ',
+  hashtags: ['teamfunqtion', 'feelthemusiq', 'dj', 'aarlerixtel', 'brabant'],
+  captionFooterNl: 'Boekingen: Booking@funqtion.nl',
+  captionFooterEn: 'Bookings: Booking@funqtion.nl',
+  instagram: 'funqtionofficial',
 };
