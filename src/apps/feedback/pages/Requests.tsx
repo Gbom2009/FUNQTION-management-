@@ -6,7 +6,8 @@ import { fmtDate, fmtDateTime } from '../../../core/format';
 import { addDays, toDateStr, todayStr } from '../../../core/dates';
 import type { Gig } from '../../../core/types';
 import { useGigs } from '../../bookings/data';
-import { importFeedback, requestFeedback, useReviews } from '../data';
+import { requestFeedback, useReviews } from '../data';
+import { importAll } from '../../portal/data';
 import { reminderDue, waiting } from '../domain/feedback';
 
 /** Ask, wait, paste the answer. */
@@ -38,9 +39,10 @@ export default function Requests() {
         <p className="small muted">{t('fb.pasteHelp')}</p>
         <textarea rows={4} value={paste} placeholder="FQ1:…" onChange={(e) => setPaste(e.target.value)} style={{ width: '100%' }} />
         <button className="btn primary" disabled={!paste.includes('FQ1:') || !me} onClick={async () => {
-          const r = await importFeedback(paste, me!.id);
+          const all = await importAll(paste, me!.id);
+          const r = all.feedback;
           setPaste('');
-          toast(t('fb.imported', { n: r.imported + r.updated }) + (r.unknownGig ? ` · ${t('fb.unknownGig', { n: r.unknownGig })}` : '') + (r.lowScores.length ? ` · ${t('fb.lowScore')}` : ''));
+          toast(t('fb.imported', { n: r.imported + r.updated }) + (all.wishes.gigs ? ` · ${t('po.imported', { w: all.wishes.wishes, c: all.wishes.contacts, f: 0 })}` : '') + (r.unknownGig ? ` · ${t('fb.unknownGig', { n: r.unknownGig })}` : '') + (r.lowScores.length ? ` · ${t('fb.lowScore')}` : ''));
         }}>{t('fb.read')}</button>
       </Section>
 

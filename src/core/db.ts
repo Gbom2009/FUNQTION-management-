@@ -7,7 +7,7 @@ import type {
   GigDay, TrackRecord, VehicleRecord, VenuePhoto,
   DayTask, GigLog, TaskTemplate, TimelineStep, VenueNote,
   Consent, MediaAsset, Post, VideoJob,
-  Epk, EpkPublish,
+  Epk, EpkPublish, Portal,
 } from './types';
 
 // Local-first storage (IndexedDB). One database for the whole Funqtion suite:
@@ -86,6 +86,8 @@ export class FunqtionDB extends Dexie {
   // app 12: Press Kit
   epk!: Table<Epk, string>;
   epkPublishes!: Table<EpkPublish, string>;
+  // app 13: Client Portal
+  portals!: Table<Portal, string>;
 
   constructor(name = 'funqtion') {
     super(name);
@@ -180,6 +182,10 @@ export class FunqtionDB extends Dexie {
       epk: 'id, updatedAt',
       epkPublishes: 'id, at, updatedAt',
     });
+    // App 13 – Client Portal (local mode: settings per gig; the page is a link).
+    this.version(10).stores({
+      portals: 'id, &gigId, updatedAt',
+    });
   }
 }
 
@@ -202,6 +208,6 @@ export const DATA_TABLES = [
   'vehicles', 'venuePhotos', 'gigDays',
   'timelineSteps', 'dayTasks', 'taskTemplates', 'gigLogs', 'venueNotes',
   'consents', 'mediaAssets', 'posts', 'videoJobs',
-  'epk', 'epkPublishes',
+  'epk', 'epkPublishes', 'portals',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];

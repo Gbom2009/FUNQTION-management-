@@ -184,6 +184,8 @@ export interface MusicWish {
   mc?: MemberId | 'none';
   done?: boolean;
   doneAt?: string;    // ISO
+  by?: 'client' | 'funqtion'; // App 13: added by the client via the portal
+  addedAt?: string;   // ISO
 }
 
 export interface Gig extends Base {
@@ -1371,4 +1373,22 @@ export interface EpkPublish extends Base {
   version: number;
   files: string[];
   snapshot: string;            // JSON of the Epk at publish time
+}
+
+// ---- App 13 – Client Portal (local mode) ---------------------------------------
+
+export const PORTAL_SECTIONS = ['overview', 'timeline', 'contacts', 'wishes', 'documents', 'after'] as const;
+export type PortalSection = (typeof PORTAL_SECTIONS)[number];
+/** Settings of one gig's client page. The page itself is a link with a snapshot inside. */
+export interface Portal extends Base {
+  gigId: ID;
+  welcome?: string;
+  sections: PortalSection[];
+  lockDays: number;           // music wishes close this many days before the gig
+  showPlayed: 'none' | 'top20' | 'all';
+  playedList?: string;        // after the gig: one "artist – title" per line (until apps 7–9 exist)
+  photosUrl?: string;         // shared album link (photos are never inside the link)
+  playlistUrl?: string;       // e.g. a Spotify playlist of the night
+  sentAt?: string;
+  lastAnswerAt?: string;
 }

@@ -120,6 +120,13 @@ The **gig** is the hub record. Future apps hang off `gigId`:
 - **Pure, tested domain** `domain/feedback.ts`: request payload, answer cleaning (clamps, whitelists), the client's message, applying an answer (review fields + consents + low-score flag → a "call back" task), reminder once after `Settings.feedbackReminderDays` (5), summary (average, recommend score, per event type, highlights).
 - Gig Day's wrap-up thank-you uses the feedback link as `{{reviewLink}}` when no Google review link is set. The Google button on the form shows for everyone (no review gating) and only when `Settings.reviewLink` exists.
 
+## App 13: Client Portal, local mode (v0.13.0)
+
+- Lives in `src/apps/portal/` (route `/portal`) and the public page `src/public/PortalPage.tsx` (`#/c/<data>`). **Dexie version 10:** `portals` (one per gig, unique `gigId`: visible sections, welcome text, lock days, played list, photo/playlist links, sent / last answer). `MusicWish` gained `by: 'client'` and `addedAt`.
+- **The page is a snapshot inside the link** (`domain/portal.ts → buildSnapshot`): date, times, venue, client-facing timeline steps (no travel/pick-up), our phone numbers, their day contacts, existing wishes and the lock date, document status (quote/contract/invoices with number, state and amount; PDFs keep going as attachments), and after the gig the played list, album/playlist links and the feedback link. Never internal notes, margins or other clients (tested). After a change, send a new link.
+- **Answers back:** wishes, day contacts, photo/announcement consent and a note come back as an `FQ1:` code (`k: 'wishes'`). `importWishes` merges wishes without duplicates, adds contacts as persons on the gig, records consents, logs an interaction and makes a task when wishes arrive after the lock date. `importAll` handles feedback and wishes in one paste box (Portal and Feedback both use it).
+- Hosted mode (token link + e-mail code, live status, signing relay) waits for "self-hosted" (plan §6).
+
 ## Navigatie: Funqtion Maps (merged from FQ-maps, v0.8.0)
 
 - Lives in `src/apps/maps/` (copied from github.com/Gbom2009/FQ-maps, phases 1–5; its original spec is `docs/maps/FQ-MAPS-SPEC.md`, the merge plan `docs/maps/PLAN.md`). Route `/maps`, **lazy-loaded** (`React.lazy` in `src/App.tsx`), so MapLibre, routing and the voice code only load when Maps opens. Static data in `public/maps/` (milieuzones, NL/BE outline, glyph fonts), data scripts in `scripts/maps/`. External endpoints stay in `src/apps/maps/config/services.ts`.

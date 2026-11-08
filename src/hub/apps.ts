@@ -17,7 +17,7 @@ export const APPS: AppEntry[] = [
   { id: 'contracts', name: 'app.contracts', desc: 'app.contracts.desc', path: '/contracts' },
   { id: 'gigday', name: 'app.gigday', desc: 'app.gigday.desc', path: '/gigday' },
   { id: 'gear', name: 'app.gear', desc: 'app.gear.desc', path: '/gear' },
-  { id: 'portal', name: 'app.portal', desc: 'app.portal.desc' },
+  { id: 'portal', name: 'app.portal', desc: 'app.portal.desc', path: '/portal' },
   { id: 'navigation', name: 'app.navigation', desc: 'app.navigation.desc', path: '/maps' },
   { id: 'promo', name: 'app.promo', desc: 'app.promo.desc', path: '/promo' },
   { id: 'presskit', name: 'app.presskit', desc: 'app.presskit.desc', path: '/presskit' },
