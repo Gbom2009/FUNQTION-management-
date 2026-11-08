@@ -6,6 +6,7 @@ import monoRegular from '@fontsource/jetbrains-mono/files/jetbrains-mono-latin-4
 import display from '@fontsource/archivo-black/files/archivo-black-latin-400-normal.woff?inline';
 import logoSvg from '../../../public/logo.svg?raw';
 import { paperLogo } from './domain/pdfDoc';
+import { safeText } from './domain/pdfText';
 
 const b64 = (dataUrl: string) => dataUrl.slice(dataUrl.indexOf(',') + 1);
 
@@ -27,6 +28,6 @@ export const paperLogoSvg = paperLogo(logoSvg);
 export function pdfBlob(definition: unknown): Promise<Blob> {
   setup();
   return new Promise((resolve) => {
-    (pdfMake.createPdf(definition as never) as unknown as { getBlob: (cb: (b: Blob) => void) => void }).getBlob(resolve);
+    (pdfMake.createPdf(safeText(definition) as never) as unknown as { getBlob: (cb: (b: Blob) => void) => void }).getBlob(resolve);
   });
 }
